@@ -4,12 +4,12 @@ plugins {
 
 android {
     namespace 'lab.opticore.vpn'
-    compileSdk 37
+    compileSdk 36
 
     defaultConfig {
         applicationId "lab.opticore.vpn"
         minSdk 28
-        targetSdk 37
+        targetSdk 36
         versionCode 1
         versionName "0.1.0"
     }
