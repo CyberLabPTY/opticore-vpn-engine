@@ -89,8 +89,8 @@ public final class MainActivity extends Activity {
                 InputType.TYPE_TEXT_FLAG_MULTI_LINE |
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         config.setHint(
-                "[Interface]\\nPrivateKey = ...\\nAddress = ...\\n\\n" +
-                "[Peer]\\nPublicKey = ...\\nEndpoint = ...");
+                "[Interface]\nPrivateKey = ...\nAddress = ...\n\n" +
+                "[Peer]\nPublicKey = ...\nEndpoint = ...");
 
         root.addView(config,new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -222,16 +222,16 @@ public final class MainActivity extends Activity {
         String text =
                 "Permiso VPN: " +
                 (permission ? "AUTORIZADO" : "PENDIENTE") +
-                "\\nConfiguración: " +
+                "\nConfiguración: " +
                 (configured ? "GUARDADA" : "PENDIENTE") +
-                "\\nEstado: " +
+                "\nEstado: " +
                 (EngineService.isConnected()
                         ? "PROTECCIÓN ACTIVA"
                         : "DESCONECTADA");
 
         String error = EngineService.getLastError();
         if (error != null && !error.isEmpty()) {
-            text += "\\nMotor: " + error;
+            text += "\nMotor: " + error;
         }
 
         status.setText(text);
