@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.Settings;
 import android.net.ConnectivityManager;
 import android.net.LinkProperties;
 import android.net.Network;
@@ -311,7 +312,9 @@ public final class LocalPanelServer {
             if ("POST".equals(method) &&
                     !"/api/vpn-connect".equals(path) &&
                     !"/api/vpn-disconnect".equals(path) &&
-                    !"/api/boost-run".equals(path)) {
+                    !"/api/boost-run".equals(path) &&
+                    !"/api/open-battery-settings".equals(path) &&
+                    !"/api/open-usage-settings".equals(path)) {
                 sendJson(
                         socket,
                         405,
@@ -364,6 +367,26 @@ public final class LocalPanelServer {
                                     .batteryDiagnostics(
                                             appContext)
                                     .toString());
+                    return;
+
+                case "/api/open-battery-settings":
+                    openSettings(
+                            Settings.ACTION_BATTERY_SAVER_SETTINGS);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"battery_settings\"}");
+                    return;
+
+                case "/api/open-usage-settings":
+                    openSettings(
+                            Settings.ACTION_USAGE_ACCESS_SETTINGS);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"usage_settings\"}");
                     return;
 
                 case "/api/recent-usage":
@@ -569,6 +592,15 @@ public final class LocalPanelServer {
                 socket.close();
             } catch (Throwable ignored) {
             }
+        }
+    }
+
+    private static void openSettings(String action) {
+        try {
+            Intent intent = new Intent(action);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            appContext.startActivity(intent);
+        } catch (Throwable ignored) {
         }
     }
 
