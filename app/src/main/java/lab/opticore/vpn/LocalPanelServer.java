@@ -307,11 +307,24 @@ public final class LocalPanelServer {
             switch (path) {
 
                 case "/api/refresh":
-                case "/data/device-status.json":
                     sendJson(
                             socket,
                             200,
                             buildDeviceStatusJson());
+                    return;
+
+                case "/data/device-status.json":
+                    if (query.startsWith("health=")) {
+                        sendJson(
+                                socket,
+                                200,
+                                "{\"ok\":true,\"engine\":\"opticore-embedded\",\"version\":\"0.1.5\"}");
+                    } else {
+                        sendJson(
+                                socket,
+                                200,
+                                buildDeviceStatusJson());
+                    }
                     return;
 
                 case "/api/dns":
