@@ -6,7 +6,8 @@ const state = {
   installPrompt: null,
   stream: null,
   lastPhoto: null,
-  cacheEntries: []
+  cacheEntries: [],
+  deviceInfo: null
 };
 
 function setText(id, value){ const el=$(id); if(el) el.textContent = value == null || value === '' ? '—' : String(value); }
@@ -41,6 +42,7 @@ async function refreshEmbedded(){
 
   $('resourceSource').textContent='Motor Android';
   if(device){
+    state.deviceInfo=device;
     setText('ramValue', Number(device.ram_available_percent).toFixed(1)+'%');
     setText('swapValue', Number(device.swap_used_percent).toFixed(1)+'%');
     setText('cpuValue', fmtMhz(device.cpu_performance_current_mhz || device.cpu_efficiency_current_mhz));
@@ -138,6 +140,7 @@ function renderCacheEntries(){
 async function cleanSelected(){
   const selected=[...document.querySelectorAll('.cacheCheck:checked')].map(x=>state.cacheEntries[Number(x.dataset.index)]?.package).filter(Boolean);
   if(!selected.length){ setText('cleanResult','Selecciona al menos una entrada.'); return; }
+  if(!window.confirm('OptiCore limpiará únicamente las cachés seleccionadas que Android permita. ¿Continuar?')) return;
   $('cleanSelectedBtn').disabled=true; $('cleanSelectedBtn').textContent='Limpiando…';
   try{
     const q=new URLSearchParams({token:'CACHE-CLEAN-2026',mode:'manual',packages:selected.join(',')});
@@ -167,7 +170,9 @@ async function startCamera(){
     $('cameraVideo').srcObject=state.stream; $('cameraVideo').hidden=false; $('cameraPreview').hidden=true;
     $('cameraCapture').disabled=false; setText('cameraState','Activa');
     const track=state.stream.getVideoTracks()[0]; const settings=track.getSettings?track.getSettings():{};
-    setText('cameraInfo','Captura web '+(settings.width||'—')+'×'+(settings.height||'—')+'. El procesamiento permanece local.');
+    const d=state.deviceInfo;
+    const nativeCaps=d ? ' · RAW '+(Number(d.camera_raw)?'sí':'no')+' · manual '+(Number(d.camera_manual_sensor)?'sí':'no') : '';
+    setText('cameraInfo','Captura web '+(settings.width||'—')+'×'+(settings.height||'—')+'. El procesamiento permanece local'+nativeCaps+'.');
   }catch(e){ setText('cameraState','Sin permiso'); setText('cameraInfo','No se pudo abrir la cámara. Revisa el permiso de cámara del navegador.'); }
 }
 
@@ -176,8 +181,18 @@ function captureCamera(){
   const c=$('cameraCanvas'); c.width=v.videoWidth; c.height=v.videoHeight;
   const ctx=c.getContext('2d',{alpha:false}); ctx.filter='none'; ctx.drawImage(v,0,0,c.width,c.height);
   state.lastPhoto=c.toDataURL('image/jpeg',Number($('jpegQuality').value)/100);
-  $('cameraPreview').src=state.lastPhoto; $('cameraPreview').hidden=false; v.hidden=true; $('cameraEnhance').disabled=false;
+  $('cameraPreview').src=state.lastPhoto; $('cameraPreview').hidden=false; v.hidden=true; $('cameraEnhance').disabled=false; $('cameraSave').disabled=false;
   setText('cameraState','Capturada');
+}
+
+function saveCamera(){
+  if(!state.lastPhoto) return;
+  const a=document.createElement('a');
+  a.href=state.lastPhoto;
+  a.download='opticore-photo-'+new Date().toISOString().replace(/[:.]/g,'-')+'.jpg';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 function enhanceCamera(){
@@ -225,6 +240,7 @@ function setup(){
   $('cameraStart').addEventListener('click',startCamera);
   $('cameraCapture').addEventListener('click',captureCamera);
   $('cameraEnhance').addEventListener('click',enhanceCamera);
+  $('cameraSave').addEventListener('click',saveCamera);
   $('jpegQuality').addEventListener('input',()=>setText('qualityValue',$('jpegQuality').value+'%'));
   window.addEventListener('online',()=>{setText('onlineBadge','Red disponible');browserNetwork();});
   window.addEventListener('offline',()=>{setText('onlineBadge','Sin conexión');browserNetwork();});
