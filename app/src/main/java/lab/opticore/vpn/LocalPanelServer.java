@@ -275,7 +275,8 @@ public final class LocalPanelServer {
                 return;
             }
 
-            if (!"GET".equals(method)) {
+            if (!"GET".equals(method) &&
+                    !"POST".equals(method)) {
                 sendJson(
                         socket,
                         405,
@@ -307,7 +308,63 @@ public final class LocalPanelServer {
                 path = "/index.html";
             }
 
+            if ("POST".equals(method) &&
+                    !"/api/vpn-connect".equals(path) &&
+                    !"/api/vpn-disconnect".equals(path)) {
+                sendJson(
+                        socket,
+                        405,
+                        jsonError(
+                                "method_not_allowed"));
+                return;
+            }
+
             switch (path) {
+
+                case "/api/vpn-status":
+                    sendJson(
+                            socket,
+                            200,
+                            LocalStatusServer.buildStatusJson());
+                    return;
+
+                case "/api/vpn-connect":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError(
+                                        "method_not_allowed"));
+                        return;
+                    }
+
+                    startEngineAction(
+                            EngineService.ACTION_CONNECT);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"connect\"}");
+                    return;
+
+                case "/api/vpn-disconnect":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError(
+                                        "method_not_allowed"));
+                        return;
+                    }
+
+                    startEngineAction(
+                            EngineService.ACTION_DISCONNECT);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"disconnect\"}");
+                    return;
 
                 case "/api/refresh":
                     sendJson(
@@ -2483,7 +2540,7 @@ public final class LocalPanelServer {
                         "Access-Control-Allow-Origin: " +
                         ALLOWED_ORIGIN +
                         "\r\n" +
-                        "Access-Control-Allow-Methods: GET, OPTIONS\r\n" +
+                        "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" +
                         "X-Content-Type-Options: nosniff\r\n" +
                         "Cache-Control: no-store\r\n" +
                         "Connection: close\r\n\r\n";
@@ -2566,6 +2623,29 @@ public final class LocalPanelServer {
 
         } catch (Throwable ignored) {
             return "{\"ok\":false,\"error\":\"unknown\"}";
+        }
+    }
+
+    private static void startEngineAction(
+            String action) {
+
+        Intent intent =
+                new Intent(
+                        appContext,
+                        EngineService.class);
+
+        intent.setAction(
+                action);
+
+        if (Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O) {
+
+            appContext.startForegroundService(
+                    intent);
+
+        } else {
+            appContext.startService(
+                    intent);
         }
     }
 
