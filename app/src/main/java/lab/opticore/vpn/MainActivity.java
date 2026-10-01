@@ -19,6 +19,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.wireguard.config.Config;
+import com.wireguard.crypto.KeyPair;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -101,6 +102,10 @@ public final class MainActivity extends Activity {
             if (!saved.isEmpty()) config.setText(saved);
         } catch (Exception ignored) {}
 
+        Button generate = button("Generar identidad WireGuard");
+        generate.setOnClickListener(v -> generateIdentity());
+        root.addView(generate);
+
         Button save = button("Guardar configuración cifrada");
         save.setOnClickListener(v -> saveConfig());
         root.addView(save);
@@ -168,6 +173,37 @@ public final class MainActivity extends Activity {
                             : "Autorización cancelada",
                     Toast.LENGTH_SHORT).show();
             refreshStatus();
+        }
+    }
+
+    private void generateIdentity() {
+        try {
+            KeyPair keyPair = new KeyPair();
+            String privateKey = keyPair.getPrivateKey().toBase64();
+            String publicKey = keyPair.getPublicKey().toBase64();
+
+            String template =
+                    "# ClientPublicKey = " + publicKey + "\n" +
+                    "[Interface]\n" +
+                    "PrivateKey = " + privateKey + "\n" +
+                    "Address = 10.66.66.2/32\n" +
+                    "DNS = 1.1.1.1\n\n" +
+                    "[Peer]\n" +
+                    "PublicKey = REEMPLAZAR_CLAVE_PUBLICA_SERVIDOR\n" +
+                    "AllowedIPs = 0.0.0.0/0\n" +
+                    "Endpoint = REEMPLAZAR_IP_SERVIDOR:51820\n" +
+                    "PersistentKeepalive = 25";
+
+            config.setText(template);
+
+            Toast.makeText(this,
+                    "Identidad WireGuard creada localmente",
+                    Toast.LENGTH_LONG).show();
+
+        } catch (Exception e) {
+            Toast.makeText(this,
+                    "No se pudo generar la identidad WireGuard",
+                    Toast.LENGTH_LONG).show();
         }
     }
 
