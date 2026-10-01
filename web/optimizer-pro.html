@@ -82,8 +82,10 @@ button:disabled{opacity:.45}
     <div class="actions">
       <button id="usageBtn">Ver actividad reciente</button>
       <button id="usageSettingsBtn">Autorizar acceso de uso</button>
+      <button id="releaseBackgroundBtn" class="danger">Liberar apps en segundo plano</button>
     </div>
     <div id="usageResult" class="result">OptiCore usa acceso de uso solo para identificar actividad reciente de aplicaciones; no lee su contenido.</div>
+    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre candidatas de usuario permitidas por Android. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
     <div id="usageList" class="list"></div>
   </section>
 </main>
@@ -192,6 +194,22 @@ button:disabled{opacity:.45}
     });
   }
 
+  async function releaseBackgroundApps(){
+    if(!requireEngine($("usageResult")))return;
+    const d=await scan();
+    if(!d)return;
+    const count=Number(d.candidate_count)||0;
+    if(count<1){
+      $("usageResult").innerHTML="<strong>No hay candidatas para liberar.</strong><br>Android no reporta aplicaciones de usuario secundarias disponibles para esta acción.";
+      return;
+    }
+    const ok=window.confirm("OptiCore detectó "+count+" aplicación(es) candidatas en segundo plano. Se ejecutará la liberación manual protegida. ¿Continuar?");
+    if(!ok)return;
+    $("usageResult").innerHTML="<strong>Procesando...</strong><br>OptiCore está ejecutando la liberación manual con las protecciones del sistema.";
+    await run("aggressive");
+    $("usageResult").innerHTML="<strong>Proceso completado.</strong><br>Revisa el resultado medido en Smart Boost. Android conserva el control final sobre sus procesos.";
+  }
+
   function formatAge(ms){const d=Math.max(0,Date.now()-Number(ms||0));const m=Math.round(d/60000);return m<1?"ahora":m<60?m+" min":Math.round(m/60)+" h"}
   function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
   async function openSettings(path,box){
@@ -205,6 +223,7 @@ button:disabled{opacity:.45}
   $("aggressiveBtn").onclick=()=>run("aggressive");
   $("batteryBtn").onclick=()=>battery().catch(e=>$("batteryResult").textContent=String(e));
   $("usageBtn").onclick=()=>usage().catch(e=>$("usageResult").textContent=String(e));
+  $("releaseBackgroundBtn").onclick=()=>releaseBackgroundApps().catch(e=>$("usageResult").textContent=String(e));
   $("batterySettingsBtn").onclick=()=>openSettings("./api/open-battery-settings",$("batteryResult"));
   $("usageSettingsBtn").onclick=()=>openSettings("./api/open-usage-settings",$("usageResult"));
 
