@@ -33,6 +33,7 @@ public final class EngineService extends Service {
     private static final int NOTIFICATION_ID = 2601;
 
     private static volatile boolean connected = false;
+    private static volatile long connectedSince = 0L;
     private static volatile String lastError = "";
 
     private final ExecutorService worker =
@@ -84,18 +85,21 @@ public final class EngineService extends Service {
             try {
                 if (backend == null) {
                     connected = false;
+                connectedSince = 0L;
                     lastError = "Backend WireGuard no disponible";
                     return;
                 }
 
                 if (!secureStore.hasConfig()) {
                     connected = false;
+                connectedSince = 0L;
                     lastError = "No hay configuración WireGuard guardada";
                     return;
                 }
 
                 if (VpnService.prepare(this) != null) {
                     connected = false;
+                connectedSince = 0L;
                     lastError = "VPN_PERMISSION_REQUIRED";
                     return;
                 }
@@ -112,6 +116,8 @@ public final class EngineService extends Service {
                         config);
 
                 connected = state == Tunnel.State.UP;
+                if (connected && connectedSince == 0L) connectedSince = System.currentTimeMillis();
+                if (!connected) connectedSince = 0L;
                 lastError = connected ? "" :
                         "El túnel no quedó activo";
 
@@ -121,6 +127,7 @@ public final class EngineService extends Service {
 
             } catch (Throwable e) {
                 connected = false;
+                connectedSince = 0L;
                 lastError = e.getClass().getSimpleName() +
                         ": " + safe(e.getMessage());
                 updateNotification("Error de conexión VPN");
@@ -139,6 +146,7 @@ public final class EngineService extends Service {
                 }
 
                 connected = false;
+                connectedSince = 0L;
                 lastError = "";
                 updateNotification("VPN desconectada");
 
@@ -153,6 +161,7 @@ public final class EngineService extends Service {
         return connected;
     }
 
+    public static long getConnectedSince() { return connectedSince; }
     public static String getLastError() {
         return lastError;
     }

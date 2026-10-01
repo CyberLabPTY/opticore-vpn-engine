@@ -30,6 +30,7 @@ public final class MainActivity extends Activity {
     private SecureStore secureStore;
     private EditText config;
     private TextView status;
+    private TextView connectionInfo;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -42,6 +43,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        Dashboard.refresh(this, secureStore, connectionInfo);
         refreshStatus();
     }
 
@@ -66,6 +68,10 @@ public final class MainActivity extends Activity {
         status = label("",14,Color.rgb(100,225,185));
         status.setPadding(0,0,0,dp(12));
         root.addView(status);
+        connectionInfo = label("Estado de red: comprobando...", 13, Color.rgb(150, 185, 202));
+        connectionInfo.setPadding(dp(12), dp(10), dp(12), dp(10));
+        connectionInfo.setBackgroundColor(Color.rgb(10, 28, 41));
+        root.addView(connectionInfo);
 
         Button authorize = button("Autorizar VPN en Android");
         authorize.setOnClickListener(v -> authorizeVpn());
@@ -113,6 +119,7 @@ public final class MainActivity extends Activity {
         Button connect = button("Conectar protección");
         connect.setOnClickListener(v -> {
             startEngine(EngineService.ACTION_CONNECT);
+            status.postDelayed(() -> { refreshStatus(); Dashboard.refresh(this, secureStore, connectionInfo); }, 1800);
             Toast.makeText(this,
                     "Solicitud de conexión enviada",
                     Toast.LENGTH_SHORT).show();
@@ -122,11 +129,15 @@ public final class MainActivity extends Activity {
         Button disconnect = button("Desconectar VPN");
         disconnect.setOnClickListener(v -> {
             startEngine(EngineService.ACTION_DISCONNECT);
+            status.postDelayed(() -> { refreshStatus(); Dashboard.refresh(this, secureStore, connectionInfo); }, 700);
             Toast.makeText(this,
                     "Solicitud de desconexión enviada",
                     Toast.LENGTH_SHORT).show();
         });
         root.addView(disconnect);
+        Button refresh = button("Actualizar estado / IP");
+        refresh.setOnClickListener(v -> { refreshStatus(); Dashboard.refresh(this, secureStore, connectionInfo); });
+        root.addView(refresh);
 
         Switch auto = new Switch(this);
         auto.setText("Reconectar automáticamente");
