@@ -7,6 +7,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.net.VpnService;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -72,6 +74,8 @@ public final class EngineService extends Service {
     private GoBackend backend;
     private ManagedTunnel tunnel;
     private SecureStore secureStore;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
 
     @Override
     public void onCreate() {
@@ -95,6 +99,8 @@ public final class EngineService extends Service {
         } catch (Throwable e) {
             lastError = "Backend: " + safe(e.getMessage());
         }
+
+        registerNetworkRecovery();
 
         telemetryWorker.scheduleAtFixedRate(
                 this::sampleTelemetry,
@@ -376,8 +382,48 @@ public final class EngineService extends Service {
         return lastError;
     }
 
+    private void registerNetworkRecovery() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return;
+        }
+
+        try {
+            connectivityManager =
+                    (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+
+            if (connectivityManager == null) {
+                return;
+            }
+
+            networkCallback =
+                    new ConnectivityManager.NetworkCallback() {
+                        @Override
+                        public void onAvailable(Network network) {
+                            if (Prefs.autoReconnect(EngineService.this)
+                                    && !connected) {
+                                connect();
+                            }
+                        }
+                    };
+
+            connectivityManager.registerDefaultNetworkCallback(
+                    networkCallback);
+
+        } catch (Throwable ignored) {
+            networkCallback = null;
+        }
+    }
+
     @Override
     public void onDestroy() {
+        if (connectivityManager != null && networkCallback != null) {
+            try {
+                connectivityManager.unregisterNetworkCallback(
+                        networkCallback);
+            } catch (Throwable ignored) {
+            }
+        }
+
         telemetryWorker.shutdownNow();
         worker.shutdownNow();
         super.onDestroy();
