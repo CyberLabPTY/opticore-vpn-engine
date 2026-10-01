@@ -77,6 +77,10 @@ public final class EngineService extends Service {
     public void onCreate() {
         super.onCreate();
 
+        // Los diagnósticos locales no dependen del estado del túnel WireGuard.
+        LocalStatusServer.start(this);
+        LocalPanelServer.start(this);
+
         createChannel();
         startForeground(
                 NOTIFICATION_ID,
@@ -101,6 +105,10 @@ public final class EngineService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Reafirma ambos servidores en cada arranque/reinicio del servicio.
+        LocalStatusServer.start(this);
+        LocalPanelServer.start(this);
+
         String action = intent == null ? null : intent.getAction();
 
         if (ACTION_CONNECT.equals(action)) {
