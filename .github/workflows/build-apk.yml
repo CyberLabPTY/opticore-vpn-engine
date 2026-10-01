@@ -10,6 +10,7 @@ on:
     branches:
       - main
       - opticore-polish-v017
+      - opticore-release-fix-v024
 
 jobs:
   build:
