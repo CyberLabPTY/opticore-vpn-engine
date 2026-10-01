@@ -1,5 +1,9 @@
 name: Build OptiCore VPN APK
 
+concurrency:
+  group: opticore-build-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
