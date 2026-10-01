@@ -54,6 +54,25 @@ jobs:
           path: ~/.android/debug.keystore
           key: opticore-debug-keystore-v1
 
+      - name: Verify one interface source for PWA and APK
+        run: |
+          gradle :app:generateOptiCorePanelAssets
+          python - <<'PY'
+          import hashlib, pathlib, zipfile, sys
+          web = pathlib.Path("web")
+          bundle = pathlib.Path("app/build/generated/opticorePanelAssets/panel-bundle.zip")
+          required = ["index.html","styles.css","app.js","manifest.webmanifest","sw.js"]
+          with zipfile.ZipFile(bundle) as z:
+              for name in required:
+                  a = (web / name).read_bytes()
+                  b = z.read(name)
+                  if a != b:
+                      print(f"MISMATCH: {name}", file=sys.stderr)
+                      sys.exit(1)
+                  print(name, hashlib.sha256(a).hexdigest())
+          print("PWA and embedded APK panel use identical canonical web files.")
+          PY
+
       - name: Build APK
         run: gradle :app:assembleDebug --stacktrace
 
