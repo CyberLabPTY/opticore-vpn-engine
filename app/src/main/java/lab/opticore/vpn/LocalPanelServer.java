@@ -2533,6 +2533,11 @@ public final class LocalPanelServer {
         }
 
         if (path.endsWith(
+                ".png")) {
+            return "image/png";
+        }
+
+        if (path.endsWith(
                 ".json")) {
             return "application/json; charset=utf-8";
         }
