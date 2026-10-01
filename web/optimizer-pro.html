@@ -65,7 +65,7 @@ button:disabled{opacity:.45}
     </div>
     <div id="boostResult" class="result">Todavía no se ha ejecutado ninguna liberación.</div>
     <div id="candidateList" class="list"></div>
-    <div class="note">La liberación intensiva puede cerrar aplicaciones de usuario en segundo plano. Android puede reiniciar algunas si las necesita. OptiCore protege componentes del sistema, launcher, teclado y su propio proceso.</div>
+    <div class="note">La liberación intensiva solicita a Android finalizar procesos de usuario en segundo plano. Android puede ignorar la solicitud o reiniciar procesos si los necesita. No equivale a “Forzar detención” ni elimina tarjetas de Recientes. OptiCore protege componentes del sistema, launcher, teclado y su propio proceso.</div>
   </section>
 
   <section class="section">
@@ -84,10 +84,10 @@ button:disabled{opacity:.45}
       <button id="usageSettingsBtn">Autorizar acceso de uso</button>
       <button id="releaseBackgroundBtn" class="danger">Liberar apps en segundo plano</button>
       <button id="selectAllBtn">Seleccionar todas</button>
-      <button id="closeSelectedBtn" class="danger" disabled>Cerrar seleccionadas</button>
+      <button id="closeSelectedBtn" class="danger" disabled>Liberar seleccionadas</button>
     </div>
     <div id="usageResult" class="result">OptiCore usa acceso de uso solo para identificar actividad reciente de aplicaciones; no lee su contenido.</div>
-    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre candidatas de usuario permitidas por Android. También puedes marcar aplicaciones concretas y usar “Cerrar seleccionadas”. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
+    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre aplicaciones de usuario permitidas por Android. También puedes marcar aplicaciones concretas y usar “Liberar seleccionadas”. Esto solicita liberar procesos en segundo plano; no equivale a “Forzar detención” ni elimina tarjetas de la pantalla Recientes. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
     <div id="usageList" class="list"></div>
   </section>
 </main>
@@ -145,7 +145,7 @@ button:disabled{opacity:.45}
         "RAM después: "+n(d.ram_after_mb)+" MB<br>"+
         "Cambio medido: "+(delta>=0?"+":"")+n(delta)+" MB<br>"+
         "Memoria recuperada reportada: <b>"+n(freed)+" MB</b><br>"+
-        "Paquetes a los que se intentó detener: "+(d.attempted_count||0)+".";
+        "Paquetes a los que se solicitó liberar en segundo plano: "+(d.attempted_count||0)+".";
       setState("COMPLETADO","ok");
       await scan().catch(()=>{});
     }catch(e){
@@ -188,7 +188,7 @@ button:disabled{opacity:.45}
       $("usageResult").innerHTML="<strong>Acceso de uso pendiente.</strong><br>Autorízalo para listar actividad reciente.";
       return;
     }
-    $("usageResult").innerHTML="<strong>Actividad reciente disponible.</strong><br>Se muestran hasta 20 aplicaciones de usuario.";
+    $("usageResult").innerHTML="<strong>Actividad reciente disponible.</strong><br>Se muestran hasta 20 aplicaciones de usuario. Esta lista es historial de uso y no significa que todas sigan ejecutándose.";
     (d.apps||[]).forEach(x=>{
       const row=document.createElement("div");row.className="app";
       const label=document.createElement("label");label.className="app-select";
@@ -220,8 +220,8 @@ button:disabled{opacity:.45}
     const selected=selectedPackages();
     $("closeSelectedBtn").disabled=selected.length===0;
     $("closeSelectedBtn").textContent=selected.length
-      ? "Cerrar seleccionadas ("+selected.length+")"
-      : "Cerrar seleccionadas";
+      ? "Liberar seleccionadas ("+selected.length+")"
+      : "Liberar seleccionadas";
     const all=[...document.querySelectorAll(".appSelect")];
     $("selectAllBtn").textContent=all.length>0&&selected.length===all.length
       ? "Deseleccionar todas"
@@ -276,7 +276,7 @@ button:disabled{opacity:.45}
         "RAM antes: "+n(d.ram_before_mb)+" MB · "+
         "RAM después: "+n(d.ram_after_mb)+" MB · "+
         "Cambio medido: "+(delta>=0?"+":"")+n(delta)+" MB.<br>"+
-        "Android decide qué procesos se detienen o se reinician.";
+        "Android decide qué procesos se liberan o se reinician.<br>Esta acción no equivale a “Forzar detención” y no elimina la tarjeta de la pantalla de aplicaciones recientes.";
       await scan().catch(()=>{});
     }catch(e){
       $("usageResult").innerHTML="<strong>Error al procesar la selección.</strong><br>"+escapeHtml(String(e));
