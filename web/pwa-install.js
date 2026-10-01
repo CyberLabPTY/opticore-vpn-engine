@@ -2,6 +2,27 @@
   var deferredPrompt=null;
   var installed=false;
 
+  if(localPanel()){
+    try{
+      if("serviceWorker" in navigator){
+        navigator.serviceWorker.getRegistrations()
+          .then(function(regs){regs.forEach(function(r){r.unregister();});})
+          .catch(function(){});
+      }
+      if(window.caches && caches.keys){
+        caches.keys()
+          .then(function(keys){keys.forEach(function(k){caches.delete(k);});})
+          .catch(function(){});
+      }
+    }catch(e){}
+    document.addEventListener("DOMContentLoaded",function(){
+      var old=document.getElementById("ocInstallIsland");
+      if(old)old.remove();
+      var tip=document.getElementById("ocPwaTip");
+      if(tip)tip.remove();
+    });
+  }
+
   function standalone(){
     return window.matchMedia("(display-mode: standalone)").matches ||
            window.navigator.standalone===true;
@@ -83,7 +104,7 @@
     hide();
   });
 
-  if("serviceWorker" in navigator){
+  if("serviceWorker" in navigator && !localPanel()){
     window.addEventListener("load",function(){
       navigator.serviceWorker.register("/sw.js",{scope:"/"})
         .catch(function(e){console.log("OptiCore SW",e)});
