@@ -37,7 +37,42 @@
       </div>
     </section>
 
+    <nav class="contact-strip" aria-label="Contacto OptiCore">
+      <a class="contact-link telegram" href="https://t.me/kc_c1990" target="_blank" rel="noopener noreferrer" aria-label="Abrir Telegram @kc_c1990">
+        <span class="contact-icon" aria-hidden="true">➤</span>
+        <span><strong>Telegram</strong><small>@kc_c1990</small></span>
+      </a>
+      <a class="contact-link whatsapp" href="https://wa.me/50767833122" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp">
+        <span class="contact-icon" aria-hidden="true">◉</span>
+        <span><strong>WhatsApp</strong><small>Contacto directo</small></span>
+      </a>
+    </nav>
+
     <main class="grid">
+      <section class="panel wide vpn-panel">
+        <div class="section-head">
+          <div><p class="kicker">VPN / Protección</p><h2>OptiCore VPN Engine</h2></div>
+          <span id="vpnState" class="mini">Comprobando…</span>
+        </div>
+        <div class="vpn-status-line">
+          <span id="vpnShield" class="vpn-shield" aria-hidden="true">✓</span>
+          <div><strong id="vpnProtection">Verificando protección…</strong><p id="vpnDetail" class="note">Consultando el motor WireGuard local.</p></div>
+        </div>
+        <div class="metrics vpn-metrics">
+          <article><span>Servidor</span><strong id="vpnEndpoint">—</strong></article>
+          <article><span>Configuración</span><strong id="vpnConfig">—</strong></article>
+          <article><span>Tiempo conectado</span><strong id="vpnUptime">—</strong></article>
+          <article><span>Tráfico RX / TX</span><strong id="vpnTraffic">—</strong></article>
+        </div>
+        <div class="vpn-actions">
+          <button id="vpnConnectBtn" class="primary">Conectar protección</button>
+          <button id="vpnDisconnectBtn" class="secondary">Desconectar VPN</button>
+          <button id="vpnRefreshBtn" class="secondary">Actualizar estado</button>
+          <a id="vpnOpenAppBtn" class="secondary button-link" href="opticorevpn://control">Abrir motor Android</a>
+        </div>
+        <p id="vpnMessage" class="note">La conexión y desconexión directa están disponibles cuando este panel se abre desde el motor Android de OptiCore.</p>
+      </section>
+
       <section class="panel">
         <div class="section-head">
           <div><p class="kicker">Sistema</p><h2>Recursos</h2></div>
