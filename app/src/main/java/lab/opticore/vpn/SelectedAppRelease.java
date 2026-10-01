@@ -100,6 +100,10 @@ public final class SelectedAppRelease {
             double afterMb = after.availMem / 1048576.0;
 
             out.put("ok", true);
+            out.put("operation", "background_process_release_request");
+            out.put("request_only", true);
+            out.put("removes_recent_tasks", false);
+            out.put("force_stop", false);
             out.put("requested_count", selected.size());
             out.put("attempted_count", attempted.length());
             out.put("attempted_packages", attempted);
@@ -110,7 +114,7 @@ public final class SelectedAppRelease {
             out.put("measured_delta_mb", Math.round((afterMb - beforeMb) * 10.0) / 10.0);
             out.put(
                     "note",
-                    "OptiCore requests release only for selected user apps. Android retains final control over process lifetime.");
+                    "OptiCore requests background-process release only for selected user apps. Android retains final control. This does not force-stop apps or remove their cards from Recents.");
 
         } catch (Throwable e) {
             try {
