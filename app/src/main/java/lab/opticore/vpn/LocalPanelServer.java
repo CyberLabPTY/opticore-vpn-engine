@@ -8,11 +8,13 @@ import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Environment;
+import android.util.Base64;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
@@ -78,38 +80,93 @@ public final class LocalPanelServer {
     private static void loadAssets() {
         ASSETS.clear();
 
-        try (InputStream raw =
-                     appContext.getAssets().open(PANEL_BUNDLE);
-             ZipInputStream zip =
-                     new ZipInputStream(raw)) {
+        try {
+            StringBuilder encoded =
+                    new StringBuilder();
 
-            ZipEntry entry;
-            byte[] buffer = new byte[8192];
+            for (int i = 0; i < 6; i++) {
+                String name =
+                        String.format(
+                                Locale.US,
+                                "panel-bundle.b64.%02d",
+                                i);
 
-            while ((entry = zip.getNextEntry()) != null) {
-                if (entry.isDirectory()) continue;
+                try (InputStream in =
+                             appContext
+                                     .getAssets()
+                                     .open(name);
+                     ByteArrayOutputStream out =
+                             new ByteArrayOutputStream()) {
 
-                String name = entry.getName();
+                    byte[] buffer =
+                            new byte[8192];
 
-                if (name.startsWith("/") ||
-                        name.contains("..")) {
-                    continue;
+                    int read;
+
+                    while ((read =
+                            in.read(buffer)) != -1) {
+
+                        out.write(
+                                buffer,
+                                0,
+                                read);
+                    }
+
+                    encoded.append(
+                            out.toString(
+                                    StandardCharsets.UTF_8.name()));
                 }
+            }
 
-                ByteArrayOutputStream out =
-                        new ByteArrayOutputStream();
+            byte[] zipBytes =
+                    Base64.decode(
+                            encoded.toString(),
+                            Base64.DEFAULT);
 
-                int read;
+            try (ZipInputStream zip =
+                         new ZipInputStream(
+                                 new ByteArrayInputStream(
+                                         zipBytes))) {
 
-                while ((read = zip.read(buffer)) != -1) {
-                    out.write(buffer, 0, read);
+                ZipEntry entry;
+                byte[] buffer =
+                        new byte[8192];
+
+                while ((entry =
+                        zip.getNextEntry()) != null) {
+
+                    if (entry.isDirectory()) {
+                        continue;
+                    }
+
+                    String name =
+                            entry.getName();
+
+                    if (name.startsWith("/") ||
+                            name.contains("..")) {
+                        continue;
+                    }
+
+                    ByteArrayOutputStream out =
+                            new ByteArrayOutputStream();
+
+                    int read;
+
+                    while ((read =
+                            zip.read(buffer)) != -1) {
+
+                        out.write(
+                                buffer,
+                                0,
+                                read);
+                    }
+
+                    ASSETS.put(
+                            "/" + name,
+                            out.toByteArray());
+
+                    zip.closeEntry();
                 }
-
-                ASSETS.put(
-                        "/" + name,
-                        out.toByteArray());
-
-                zip.closeEntry();
             }
 
         } catch (Throwable ignored) {
