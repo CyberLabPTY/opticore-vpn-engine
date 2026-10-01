@@ -1,0 +1,37 @@
+<style id="opticore-status-pro-v1">
+.oc-secmon{margin:14px 0 16px;padding:15px;border-radius:18px;background:linear-gradient(145deg,rgba(7,26,40,.96),rgba(10,39,55,.82));border:1px solid rgba(83,223,207,.20);box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.oc-sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.oc-pill{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;font-size:13px;font-weight:900;letter-spacing:.04em;border:1px solid rgba(255,255,255,.08)}
+.oc-dot{width:11px;height:11px;border-radius:50%}
+.oc-pill.on{color:#a8ffd0;background:rgba(28,101,68,.25);border-color:rgba(73,227,138,.32)}
+.oc-pill.on .oc-dot{background:#49e38a;animation:ocPulse 1.7s infinite}
+.oc-pill.off{color:#ffb0bd;background:rgba(105,30,47,.25);border-color:rgba(255,95,122,.30)}
+.oc-pill.off .oc-dot{background:#ff5f7a}
+.oc-pill.wait{color:#ffe09b;background:rgba(113,83,22,.22);border-color:rgba(244,185,66,.28)}
+.oc-pill.wait .oc-dot{background:#f4b942;animation:ocPulseAmber 1.4s infinite}
+.oc-pill.na{color:#b8c9d5;background:rgba(80,95,108,.20);border-color:rgba(160,180,195,.18)}
+.oc-pill.na .oc-dot{background:#8297a5}
+.oc-live{font-size:10px;font-weight:900;letter-spacing:.12em;color:#53dfcf;padding:6px 9px;border-radius:999px;border:1px solid rgba(83,223,207,.22);background:rgba(83,223,207,.06)}
+.oc-flow{display:flex;align-items:center;gap:12px;margin-top:14px;padding:13px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}
+.oc-bars{height:24px;display:flex;align-items:flex-end;gap:4px;min-width:42px}
+.oc-bars i{display:block;width:5px;border-radius:999px;background:linear-gradient(180deg,#53dfcf,#5bc0eb);transform-origin:bottom;animation:ocBar 1s ease-in-out infinite}
+.oc-bars i:nth-child(1){height:8px;animation-delay:0s}.oc-bars i:nth-child(2){height:15px;animation-delay:.12s}.oc-bars i:nth-child(3){height:23px;animation-delay:.24s}.oc-bars i:nth-child(4){height:15px;animation-delay:.36s}.oc-bars i:nth-child(5){height:9px;animation-delay:.48s}
+.oc-bars.idle i{animation:none;opacity:.18}
+.oc-flow-main{min-width:0;flex:1}.oc-flow-title{font-size:13px;font-weight:900;color:#eef7ff}.oc-flow-sub{font-size:11px;color:#7894a5;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oc-sec-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.oc-mini{padding:11px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}
+.oc-mini-k{font-size:11px;color:#7894a5}.oc-mini-v{margin-top:4px;font-size:14px;font-weight:850;color:#eef7ff}
+@keyframes ocBar{0%,100%{transform:scaleY(.35);opacity:.4}50%{transform:scaleY(1);opacity:1}}
+@keyframes ocPulse{0%{box-shadow:0 0 0 0 rgba(73,227,138,.55)}70%{box-shadow:0 0 0 10px rgba(73,227,138,0)}100%{box-shadow:0 0 0 0 rgba(73,227,138,0)}}
+@keyframes ocPulseAmber{0%{box-shadow:0 0 0 0 rgba(244,185,66,.5)}70%{box-shadow:0 0 0 10px rgba(244,185,66,0)}100%{box-shadow:0 0 0 0 rgba(244,185,66,0)}}
+</style>
+<script id="opticore-status-pro-v1-script">
+(function(){
+function fmt(total){total=Math.max(0,Number(total)||0);var h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=Math.floor(total%60);function p(n){return n<10?"0"+n:n}return h>0?h+":"+p(m)+":"+p(s):p(m)+":"+p(s)}
+function ensure(){var host=document.getElementById("opticore-bridge-v1");if(!host)return null;var box=document.getElementById("ocSecurityMonitor");if(box)return box;box=document.createElement("div");box.id="ocSecurityMonitor";box.className="oc-secmon";box.innerHTML="<div class=\"oc-sec-head\"><div id=\"ocMainPill\" class=\"oc-pill wait\"><span class=\"oc-dot\"></span><span id=\"ocMainText\">VERIFICANDO VPN</span></div><div class=\"oc-live\">LIVE</div></div><div class=\"oc-flow\"><div id=\"ocBars\" class=\"oc-bars idle\"><i></i><i></i><i></i><i></i><i></i></div><div class=\"oc-flow-main\"><div id=\"ocFlowTitle\" class=\"oc-flow-title\">Analizando túnel seguro</div><div id=\"ocFlowSub\" class=\"oc-flow-sub\">Esperando estado de OptiCore</div></div></div><div class=\"oc-sec-grid\"><div class=\"oc-mini\"><div class=\"oc-mini-k\">Estado del túnel</div><div id=\"ocTunnelPro\" class=\"oc-mini-v\">Comprobando...</div></div><div class=\"oc-mini\"><div class=\"oc-mini-k\">Sesión protegida</div><div id=\"ocSessionPro\" class=\"oc-mini-v\">--</div></div></div>";var grid=document.getElementById("opticoreNetwork");var anchor=grid&&grid.parentElement&&grid.parentElement.parentElement;if(anchor&&anchor.parentElement===host)host.insertBefore(box,anchor);else host.appendChild(box);return box}
+function paint(mode,d){ensure();var pill=document.getElementById("ocMainPill"),txt=document.getElementById("ocMainText"),bars=document.getElementById("ocBars"),title=document.getElementById("ocFlowTitle"),sub=document.getElementById("ocFlowSub"),tun=document.getElementById("ocTunnelPro"),ses=document.getElementById("ocSessionPro");if(!pill)return;pill.className="oc-pill "+mode;if(mode==="on"){txt.textContent="VPN PROTEGIDA";bars.className="oc-bars";title.textContent="CANAL CIFRADO ACTIVO";sub.textContent=d&&d.endpoint?d.endpoint:"OptiCore VPN";tun.textContent="WireGuard conectado";ses.textContent=fmt(d&&d.connected_seconds)}else if(mode==="off"){txt.textContent="VPN DESCONECTADA";bars.className="oc-bars idle";title.textContent="TÚNEL INACTIVO";sub.textContent="El tráfico no está usando OptiCore VPN";tun.textContent="Desconectado";ses.textContent="00:00"}else if(mode==="na"){txt.textContent="OPTICORE NO DISPONIBLE";bars.className="oc-bars idle";title.textContent="MONITOR SIN RESPUESTA";sub.textContent="Abre OptiCore para recuperar el estado";tun.textContent="No disponible";ses.textContent="--"}else{txt.textContent="VERIFICANDO VPN";bars.className="oc-bars";title.textContent="ANALIZANDO TÚNEL";sub.textContent="Consultando OptiCore local";tun.textContent="Comprobando...";ses.textContent="--"}}
+async function refresh(){ensure();if(!navigator.onLine){paint("off");return}paint("wait");try{var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("http");var d=await r.json();paint(d.connected?"on":"off",d)}catch(e){paint("na")}}
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){ensure();refresh()})}else{ensure();refresh()}
+setInterval(refresh,3000);window.addEventListener("focus",refresh);window.addEventListener("online",refresh);window.addEventListener("offline",refresh);
+})();
+</script>
