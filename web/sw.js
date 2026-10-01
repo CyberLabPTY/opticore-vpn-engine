@@ -1,4 +1,4 @@
-const CACHE="opticore-pwa-v1";
+const CACHE="opticore-pwa-v2";
 const STATIC=[
   "/",
   "/index.html",
@@ -13,7 +13,9 @@ const STATIC=[
   "/manifest.webmanifest",
   "/pwa-install.js",
   "/icon-192.svg",
-  "/icon-512.svg"
+  "/icon-512.svg",
+  "/camera-lab-pro.html",
+  "/optimizer-pro.html"
 ];
 
 self.addEventListener("install",event=>{
