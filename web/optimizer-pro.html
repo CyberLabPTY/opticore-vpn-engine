@@ -28,7 +28,7 @@ button.danger{border-color:rgba(255,143,143,.35);color:#ffd6d6;background:rgba(7
 button:disabled{opacity:.45}
 .result{margin-top:12px;padding:13px;border:1px solid rgba(83,223,207,.16);border-radius:14px;background:rgba(3,18,27,.64);font-size:12px;line-height:1.55;color:var(--oc-muted)}
 .result strong{color:var(--oc-text)}
-.list{display:grid;gap:7px;margin-top:10px}.app{display:flex;justify-content:space-between;gap:10px;padding:10px;border:1px solid rgba(120,180,200,.12);border-radius:12px;background:rgba(5,20,30,.62)}.app span{font-size:12px}.app small{color:var(--oc-muted)}
+.list{display:grid;gap:7px;margin-top:10px}.app{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid rgba(120,180,200,.12);border-radius:12px;background:rgba(5,20,30,.62)}.app span{font-size:12px}.app small{color:var(--oc-muted)}.app-select{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}.app-select input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--oc-accent)}.app-select span{min-width:0}
 .note{margin-top:10px;color:var(--oc-muted);font-size:11px;line-height:1.5}
 .ok{color:#7fe3c5}.warn{color:var(--oc-warn)}.bad{color:var(--oc-danger)}
 @media(max-width:620px){.grid{grid-template-columns:1fr 1fr}.actions{grid-template-columns:1fr}.hero h1{font-size:24px}.card strong{font-size:21px}}
@@ -83,9 +83,11 @@ button:disabled{opacity:.45}
       <button id="usageBtn">Ver actividad reciente</button>
       <button id="usageSettingsBtn">Autorizar acceso de uso</button>
       <button id="releaseBackgroundBtn" class="danger">Liberar apps en segundo plano</button>
+      <button id="selectAllBtn">Seleccionar todas</button>
+      <button id="closeSelectedBtn" class="danger" disabled>Cerrar seleccionadas</button>
     </div>
     <div id="usageResult" class="result">OptiCore usa acceso de uso solo para identificar actividad reciente de aplicaciones; no lee su contenido.</div>
-    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre candidatas de usuario permitidas por Android. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
+    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre candidatas de usuario permitidas por Android. También puedes marcar aplicaciones concretas y usar “Cerrar seleccionadas”. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
     <div id="usageList" class="list"></div>
   </section>
 </main>
@@ -189,9 +191,99 @@ button:disabled{opacity:.45}
     $("usageResult").innerHTML="<strong>Actividad reciente disponible.</strong><br>Se muestran hasta 20 aplicaciones de usuario.";
     (d.apps||[]).forEach(x=>{
       const row=document.createElement("div");row.className="app";
-      row.innerHTML="<span><b>"+escapeHtml(x.label||x.package)+"</b><br><small>"+escapeHtml(x.package)+"</small></span><small>"+formatAge(x.last_used_ms)+"</small>";
+      const label=document.createElement("label");label.className="app-select";
+      const check=document.createElement("input");
+      check.type="checkbox";
+      check.className="appSelect";
+      check.dataset.package=String(x.package||"");
+      check.addEventListener("change",updateSelectionUi);
+      const text=document.createElement("span");
+      text.innerHTML="<b>"+escapeHtml(x.label||x.package)+"</b><br><small>"+escapeHtml(x.package)+"</small>";
+      const age=document.createElement("small");
+      age.textContent=formatAge(x.last_used_ms);
+      label.appendChild(check);
+      label.appendChild(text);
+      row.appendChild(label);
+      row.appendChild(age);
       list.appendChild(row);
     });
+    updateSelectionUi();
+  }
+
+  function selectedPackages(){
+    return [...document.querySelectorAll(".appSelect:checked")]
+      .map(x=>x.dataset.package)
+      .filter(Boolean);
+  }
+
+  function updateSelectionUi(){
+    const selected=selectedPackages();
+    $("closeSelectedBtn").disabled=selected.length===0;
+    $("closeSelectedBtn").textContent=selected.length
+      ? "Cerrar seleccionadas ("+selected.length+")"
+      : "Cerrar seleccionadas";
+    const all=[...document.querySelectorAll(".appSelect")];
+    $("selectAllBtn").textContent=all.length>0&&selected.length===all.length
+      ? "Deseleccionar todas"
+      : "Seleccionar todas";
+  }
+
+  function toggleSelectAll(){
+    const all=[...document.querySelectorAll(".appSelect")];
+    if(!all.length){
+      $("usageResult").innerHTML="<strong>Primero carga la actividad reciente.</strong><br>Toca “Ver actividad reciente” para mostrar las aplicaciones.";
+      return;
+    }
+    const mark=!all.every(x=>x.checked);
+    all.forEach(x=>x.checked=mark);
+    updateSelectionUi();
+  }
+
+  async function closeSelectedApps(){
+    if(!requireEngine($("usageResult")))return;
+    const selected=selectedPackages();
+    if(!selected.length){
+      $("usageResult").innerHTML="<strong>No hay aplicaciones seleccionadas.</strong><br>Marca una o más aplicaciones y vuelve a intentarlo.";
+      return;
+    }
+
+    const ok=window.confirm(
+      "OptiCore solicitará a Android liberar "+selected.length+
+      " aplicación(es) seleccionada(s) en segundo plano. Android conserva el control final. ¿Continuar?"
+    );
+    if(!ok)return;
+
+    $("closeSelectedBtn").disabled=true;
+    $("releaseBackgroundBtn").disabled=true;
+    $("usageResult").innerHTML="<strong>Procesando selección...</strong><br>OptiCore está solicitando a Android liberar únicamente las aplicaciones marcadas.";
+
+    try{
+      const q=new URLSearchParams({packages:selected.join(",")});
+      q.set("t",String(Date.now()));
+      const d=await json("./api/release-selected?"+q.toString(),{method:"POST"});
+
+      if(!d.ok){
+        $("usageResult").innerHTML="<strong>No se pudo completar.</strong><br>"+escapeHtml(d.reason||"Acción bloqueada por Android.");
+        return;
+      }
+
+      const delta=Number(d.measured_delta_mb)||0;
+      $("usageResult").innerHTML=
+        "<strong>Selección procesada.</strong><br>"+
+        "Seleccionadas: "+selected.length+" · "+
+        "Solicitudes enviadas: "+(d.attempted_count||0)+" · "+
+        "Omitidas/protegidas: "+(d.skipped_count||0)+".<br>"+
+        "RAM antes: "+n(d.ram_before_mb)+" MB · "+
+        "RAM después: "+n(d.ram_after_mb)+" MB · "+
+        "Cambio medido: "+(delta>=0?"+":"")+n(delta)+" MB.<br>"+
+        "Android decide qué procesos se detienen o se reinician.";
+      await scan().catch(()=>{});
+    }catch(e){
+      $("usageResult").innerHTML="<strong>Error al procesar la selección.</strong><br>"+escapeHtml(String(e));
+    }finally{
+      $("releaseBackgroundBtn").disabled=false;
+      updateSelectionUi();
+    }
   }
 
   async function releaseBackgroundApps(){
@@ -224,6 +316,8 @@ button:disabled{opacity:.45}
   $("batteryBtn").onclick=()=>battery().catch(e=>$("batteryResult").textContent=String(e));
   $("usageBtn").onclick=()=>usage().catch(e=>$("usageResult").textContent=String(e));
   $("releaseBackgroundBtn").onclick=()=>releaseBackgroundApps().catch(e=>$("usageResult").textContent=String(e));
+  $("selectAllBtn").onclick=toggleSelectAll;
+  $("closeSelectedBtn").onclick=()=>closeSelectedApps().catch(e=>$("usageResult").textContent=String(e));
   $("batterySettingsBtn").onclick=()=>openSettings("./api/open-battery-settings",$("batteryResult"));
   $("usageSettingsBtn").onclick=()=>openSettings("./api/open-usage-settings",$("usageResult"));
 
