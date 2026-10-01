@@ -313,6 +313,7 @@ public final class LocalPanelServer {
                     !"/api/vpn-connect".equals(path) &&
                     !"/api/vpn-disconnect".equals(path) &&
                     !"/api/boost-run".equals(path) &&
+                    !"/api/release-selected".equals(path) &&
                     !"/api/open-battery-settings".equals(path) &&
                     !"/api/open-usage-settings".equals(path)) {
                 sendJson(
@@ -356,6 +357,29 @@ public final class LocalPanelServer {
                                     .boost(
                                             appContext,
                                             aggressive)
+                                    .toString());
+                    return;
+
+                case "/api/release-selected":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError(
+                                        "method_not_allowed"));
+                        return;
+                    }
+
+                    Map<String, String> selectedQuery =
+                            parseQuery(query);
+
+                    sendJson(
+                            socket,
+                            200,
+                            SelectedAppRelease
+                                    .run(
+                                            appContext,
+                                            selectedQuery.get("packages"))
                                     .toString());
                     return;
 
