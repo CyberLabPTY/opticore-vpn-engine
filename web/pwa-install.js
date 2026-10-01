@@ -7,6 +7,11 @@
            window.navigator.standalone===true;
   }
 
+  function localPanel(){
+    return (location.hostname==="127.0.0.1" || location.hostname==="localhost") &&
+           (location.port==="8766" || location.port==="8080");
+  }
+
   function style(){
     if(document.getElementById("oc-pwa-style")) return;
     var s=document.createElement("style");
@@ -41,7 +46,7 @@
   }
 
   function create(){
-    if(installed || standalone()) return;
+    if(installed || standalone() || localPanel()) return;
     if(document.getElementById("ocInstallIsland")) return;
     style();
     var box=document.createElement("div");
@@ -86,7 +91,7 @@
   }
 
   document.addEventListener("DOMContentLoaded",function(){
-    if(!standalone()){
+    if(!standalone() && !localPanel()){
       setTimeout(function(){
         if(!document.getElementById("ocInstallIsland")) create();
       },2200);
