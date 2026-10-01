@@ -108,7 +108,7 @@ async function scanCache(){
   try{
     if(!state.embedded){
       const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
-      const used=est&&Number.isFinite(est.usage)?fmtMb(est.usage):'N/D';
+      const used=est&&Number.isFinite(est.usage)?fmtMb(est.usage/(1024*1024)):'N/D';
       setText('cleanState','Solo OptiCore');
       setText('cleanResult','El navegador reporta '+used+' de almacenamiento usado por este origen. No puede borrar cachés de otras aplicaciones.');
       return;
