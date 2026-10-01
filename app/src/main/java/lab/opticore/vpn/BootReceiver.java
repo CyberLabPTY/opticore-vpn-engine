@@ -9,6 +9,8 @@ public final class BootReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        // El panel y el estado local deben existir aunque la VPN esté apagada.
+        LocalStatusServer.start(context);
         LocalPanelServer.start(context);
 
         Intent service = new Intent(
