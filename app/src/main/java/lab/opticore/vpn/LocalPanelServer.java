@@ -8,6 +8,9 @@ import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Environment;
+import android.net.ConnectivityManager;
+import android.net.LinkProperties;
+import android.net.Network;
 import android.util.Base64;
 
 import org.json.JSONArray;
@@ -470,7 +473,7 @@ public final class LocalPanelServer {
 
             out.put(
                     "engine_version",
-                    "1.4-embedded");
+                    "1.5-embedded");
 
             out.put(
                     "updated_at",
@@ -2004,56 +2007,94 @@ public final class LocalPanelServer {
     }
 
     private static String activeInterfaceName() {
+        /*
+         * Usa la red ACTIVA de Android en lugar de elegir el primer tun*
+         * encontrado. Así un túnel antiguo no hace que el panel reporte
+         * TUN0 cuando la ruta real está en Wi-Fi o datos móviles.
+         */
+        try {
+            ConnectivityManager cm =
+                    (ConnectivityManager) appContext.getSystemService(
+                            Context.CONNECTIVITY_SERVICE);
+
+            if (cm != null) {
+                Network active = cm.getActiveNetwork();
+
+                if (active != null) {
+                    LinkProperties props =
+                            cm.getLinkProperties(active);
+
+                    if (props != null) {
+                        String activeName =
+                                props.getInterfaceName();
+
+                        if (activeName != null &&
+                                !activeName.trim().isEmpty()) {
+                            return activeName;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        /*
+         * Fallback para Android/ROMs que no exponen LinkProperties.
+         * Un tun* solo gana prioridad cuando EngineService confirma
+         * que WireGuard está realmente conectado.
+         */
         try {
             Enumeration<NetworkInterface> all =
-                    NetworkInterface
-                            .getNetworkInterfaces();
+                    NetworkInterface.getNetworkInterfaces();
 
-            String fallback =
-                    "desconocida";
+            String physical = "desconocida";
+            String tunnel = null;
 
-            while (all != null &&
-                    all.hasMoreElements()) {
+            while (all != null && all.hasMoreElements()) {
+                NetworkInterface ni = all.nextElement();
 
-                NetworkInterface ni =
-                        all.nextElement();
-
-                if (!ni.isUp() ||
-                        ni.isLoopback()) {
+                if (!ni.isUp() || ni.isLoopback()) {
                     continue;
                 }
 
-                String name =
-                        ni.getName();
+                String name = ni.getName();
 
                 if (name == null) {
                     continue;
                 }
 
-                if (name.startsWith(
-                        "tun")) {
-                    return name;
+                if (name.startsWith("tun")) {
+                    if (tunnel == null) {
+                        tunnel = name;
+                    }
+
+                    if (EngineService.isConnected()) {
+                        return name;
+                    }
+
+                    continue;
                 }
 
-                if (fallback.equals(
-                        "desconocida") &&
-                        (name.startsWith(
-                                "wlan") ||
-                                name.startsWith(
-                                        "rmnet") ||
-                                name.startsWith(
-                                        "eth"))) {
-
-                    fallback =
-                            name;
+                if (physical.equals("desconocida") &&
+                        (name.startsWith("wlan") ||
+                         name.startsWith("rmnet") ||
+                         name.startsWith("eth"))) {
+                    physical = name;
                 }
             }
 
-            return fallback;
+            if (!physical.equals("desconocida")) {
+                return physical;
+            }
+
+            if (EngineService.isConnected() && tunnel != null) {
+                return tunnel;
+            }
+
+            return "desconocida";
 
         } catch (Throwable ignored) {
-            return EngineService
-                    .isConnected()
+            return EngineService.isConnected()
                     ? "tun0"
                     : "desconocida";
         }
