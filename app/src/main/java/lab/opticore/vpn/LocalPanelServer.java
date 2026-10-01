@@ -2029,8 +2029,7 @@ public final class LocalPanelServer {
 
                     text.append(
                             line)
-                            .append('
-');
+                            .append('\n');
                 }
             }
 
@@ -2363,29 +2362,20 @@ public final class LocalPanelServer {
                         status +
                         " " +
                         statusText +
-                        "
-" +
+                        "\r\n" +
                         "Content-Type: " +
                         type +
-                        "
-" +
+                        "\r\n" +
                         "Content-Length: " +
                         bytes.length +
-                        "
-" +
+                        "\r\n" +
                         "Access-Control-Allow-Origin: " +
                         ALLOWED_ORIGIN +
-                        "
-" +
-                        "Access-Control-Allow-Methods: GET, OPTIONS
-" +
-                        "X-Content-Type-Options: nosniff
-" +
-                        "Cache-Control: no-store
-" +
-                        "Connection: close
-
-";
+                        "\r\n" +
+                        "Access-Control-Allow-Methods: GET, OPTIONS\r\n" +
+                        "X-Content-Type-Options: nosniff\r\n" +
+                        "Cache-Control: no-store\r\n" +
+                        "Connection: close\r\n\r\n";
 
         OutputStream out =
                 socket.getOutputStream();
@@ -2459,7 +2449,7 @@ public final class LocalPanelServer {
             return o.toString();
 
         } catch (Throwable ignored) {
-            return "{"ok":false,"error":"unknown"}";
+            return "{\"ok\":false,\"error\":\"unknown\"}";
         }
     }
 
