@@ -358,13 +358,16 @@ document.querySelectorAll(".mode[data-m]").forEach(btn=>{
   };
 });
 
-$("reset").onclick=()=>{
-  localStorage.removeItem("dolCam");
-  document.querySelectorAll(".mode[data-m]").forEach(x=>{
-    x.classList.toggle("active",x.dataset.m==="AUTO");
-  });
-  toast("Perfil restaurado a Auto");
-};
+const resetCameraMode=$("reset");
+if(resetCameraMode){
+  resetCameraMode.onclick=()=>{
+    localStorage.removeItem("dolCam");
+    document.querySelectorAll(".mode[data-m]").forEach(x=>{
+      x.classList.toggle("active",x.dataset.m==="AUTO");
+    });
+    toast("Perfil restaurado a Auto");
+  };
+}
 
 $("rbtn").onclick=()=>{
   toast(DATA.ram_state==="NORMAL"
