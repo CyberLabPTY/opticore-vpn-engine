@@ -321,7 +321,7 @@ public final class LocalPanelServer {
                         sendJson(
                                 socket,
                                 200,
-                                "{\"ok\":true,\"engine\":\"opticore-embedded\",\"version\":\"0.1.5\"}");
+                                "{\"ok\":true,\"engine\":\"opticore-embedded\",\"version\":\"" + esc(appVersion()) + "\"}");
                     } else {
                         sendJson(
                                 socket,
@@ -473,7 +473,7 @@ public final class LocalPanelServer {
 
             out.put(
                     "engine_version",
-                    "1.5-embedded");
+                    appVersion() + "-embedded");
 
             out.put(
                     "updated_at",
@@ -2292,7 +2292,7 @@ public final class LocalPanelServer {
 
             connection.setRequestProperty(
                     "User-Agent",
-                    "OptiCore/0.1.4");
+                    "OptiCore/" + appVersion());
 
             if (cloudflare) {
                 connection.setRequestProperty(
@@ -2561,6 +2561,19 @@ public final class LocalPanelServer {
 
         } catch (Throwable ignored) {
             return "{\"ok\":false,\"error\":\"unknown\"}";
+        }
+    }
+
+    private static String appVersion() {
+        try {
+            return appContext
+                    .getPackageManager()
+                    .getPackageInfo(
+                            appContext.getPackageName(),
+                            0)
+                    .versionName;
+        } catch (Throwable ignored) {
+            return "unknown";
         }
     }
 
