@@ -1,4 +1,4 @@
-const CACHE="opticore-pwa-v2";
+const CACHE="opticore-pwa-v3";
 const STATIC=[
   "/",
   "/index.html",
@@ -58,11 +58,26 @@ self.addEventListener("fetch",event=>{
     return;
   }
 
+  if(["script","style"].includes(event.request.destination)){
+    event.respondWith(
+      fetch(event.request)
+        .then(response=>{
+          if(response && response.ok){
+            const copy=response.clone();
+            caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+          }
+          return response;
+        })
+        .catch(()=>caches.match(event.request))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(cached=>{
       if(cached) return cached;
       return fetch(event.request).then(response=>{
-        if(response && response.ok) {
+        if(response && response.ok){
           const copy=response.clone();
           caches.open(CACHE).then(cache=>cache.put(event.request,copy));
         }
