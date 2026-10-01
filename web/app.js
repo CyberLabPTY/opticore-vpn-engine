@@ -305,8 +305,26 @@ function renderCapabilities(){
   $('capabilities').innerHTML=caps.map(c=>'<div class="cap"><strong>'+escapeHtml(c[0])+' · '+escapeHtml(c[1])+'</strong><span>'+escapeHtml(c[2])+'</span></div>').join('');
 }
 
+async function clearEmbeddedWebCache(){
+  if(!state.embedded) return;
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.filter(k=>k.startsWith('opticore-web-')).map(k=>caches.delete(k)));
+    }
+  }catch(e){}
+}
+
 function setupPwa(){
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  if(state.embedded){
+    clearEmbeddedWebCache();
+  }else if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
   window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); state.installPrompt=e; $('installBtn').hidden=false; });
   $('installBtn').addEventListener('click',async()=>{ if(!state.installPrompt)return; state.installPrompt.prompt(); await state.installPrompt.userChoice; state.installPrompt=null; $('installBtn').hidden=true; });
 }
