@@ -39,6 +39,10 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+
+        // Mantiene el host local en primer plano incluso con WireGuard apagado.
+        startEngine(EngineService.ACTION_PANEL);
+
         secureStore = new SecureStore(this);
         buildUi();
         refreshStatus();
