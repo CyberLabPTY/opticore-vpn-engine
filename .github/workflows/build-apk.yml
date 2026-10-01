@@ -31,8 +31,17 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
+      - name: Restore stable OptiCore signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: opticore-debug-keystore-v1
+
       - name: Build APK
         run: gradle :app:assembleDebug --stacktrace
+
+      - name: Verify signing key
+        run: ls -lh ~/.android/debug.keystore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
