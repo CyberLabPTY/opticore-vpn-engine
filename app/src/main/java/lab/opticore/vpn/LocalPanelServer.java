@@ -310,7 +310,8 @@ public final class LocalPanelServer {
 
             if ("POST".equals(method) &&
                     !"/api/vpn-connect".equals(path) &&
-                    !"/api/vpn-disconnect".equals(path)) {
+                    !"/api/vpn-disconnect".equals(path) &&
+                    !"/api/boost-run".equals(path)) {
                 sendJson(
                         socket,
                         405,
@@ -320,6 +321,60 @@ public final class LocalPanelServer {
             }
 
             switch (path) {
+
+                case "/api/boost-scan":
+                    sendJson(
+                            socket,
+                            200,
+                            SmartBoostEngine.scan(appContext).toString());
+                    return;
+
+                case "/api/boost-run":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError(
+                                        "method_not_allowed"));
+                        return;
+                    }
+
+                    Map<String, String> boostQuery =
+                            parseQuery(query);
+
+                    boolean aggressive =
+                            "aggressive".equalsIgnoreCase(
+                                    boostQuery.get("mode"));
+
+                    sendJson(
+                            socket,
+                            200,
+                            SmartBoostEngine
+                                    .boost(
+                                            appContext,
+                                            aggressive)
+                                    .toString());
+                    return;
+
+                case "/api/battery-diagnostics":
+                    sendJson(
+                            socket,
+                            200,
+                            SmartBoostEngine
+                                    .batteryDiagnostics(
+                                            appContext)
+                                    .toString());
+                    return;
+
+                case "/api/recent-usage":
+                    sendJson(
+                            socket,
+                            200,
+                            SmartBoostEngine
+                                    .recentUsage(
+                                            appContext)
+                                    .toString());
+                    return;
 
                 case "/api/vpn-status":
                     sendJson(
