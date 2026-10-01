@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07131d">
+<title>OptiCore | Optimización Pro</title>
+<link rel="stylesheet" href="./professional-ui.css">
+<style>
+:root{--oc-bg:#07131d;--oc-panel:#0b2030;--oc-line:rgba(83,223,207,.22);--oc-text:#eefaff;--oc-muted:#8da7b6;--oc-accent:#53dfcf;--oc-accent2:#5bc0eb;--oc-warn:#ffd37d;--oc-danger:#ff8f8f}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 15% -10%,rgba(91,192,235,.12),transparent 28rem),var(--oc-bg);color:var(--oc-text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{width:min(980px,100%);margin:auto;padding:16px 12px 34px}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.back{display:inline-flex;align-items:center;gap:8px;color:var(--oc-text);text-decoration:none;font-weight:800;font-size:13px;padding:9px 12px;border:1px solid var(--oc-line);border-radius:13px;background:rgba(8,31,45,.86)}
+.badge{font-size:11px;font-weight:900;letter-spacing:.08em;color:var(--oc-accent);border:1px solid var(--oc-line);border-radius:999px;padding:7px 10px}
+.hero{padding:18px;border:1px solid var(--oc-line);border-radius:20px;background:linear-gradient(180deg,rgba(14,42,59,.96),rgba(7,26,38,.96))}
+.hero h1{margin:0 0 7px;font-size:28px;letter-spacing:-.04em}.hero p{margin:0;color:var(--oc-muted);line-height:1.5;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.card,.section{border:1px solid var(--oc-line);border-radius:18px;background:rgba(7,28,41,.9);padding:15px}
+.card span{display:block;color:var(--oc-muted);font-size:11px}.card strong{display:block;margin-top:6px;font-size:24px}.card small{display:block;margin-top:6px;color:var(--oc-muted);line-height:1.4}
+.section{margin-top:12px}.section h2{margin:0 0 12px;font-size:18px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid rgba(120,180,200,.11)}.row:first-of-type{border-top:0}.row div{min-width:0}.row b{display:block;font-size:13px}.row small{display:block;margin-top:3px;color:var(--oc-muted);font-size:11px;line-height:1.4}
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+button{min-height:44px;border-radius:13px;border:1px solid rgba(83,223,207,.24);background:#0d2a3c;color:var(--oc-text);font-weight:850;padding:10px 12px}
+button.primary{background:linear-gradient(135deg,var(--oc-accent),var(--oc-accent2));color:#041217;border:0}
+button.danger{border-color:rgba(255,143,143,.35);color:#ffd6d6;background:rgba(75,28,34,.55)}
+button:disabled{opacity:.45}
+.result{margin-top:12px;padding:13px;border:1px solid rgba(83,223,207,.16);border-radius:14px;background:rgba(3,18,27,.64);font-size:12px;line-height:1.55;color:var(--oc-muted)}
+.result strong{color:var(--oc-text)}
+.list{display:grid;gap:7px;margin-top:10px}.app{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid rgba(120,180,200,.12);border-radius:12px;background:rgba(5,20,30,.62)}.app span{font-size:12px}.app small{color:var(--oc-muted)}.app-select{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}.app-select input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--oc-accent)}.app-select span{min-width:0}
+.note{margin-top:10px;color:var(--oc-muted);font-size:11px;line-height:1.5}
+.ok{color:#7fe3c5}.warn{color:var(--oc-warn)}.bad{color:var(--oc-danger)}
+@media(max-width:620px){.grid{grid-template-columns:1fr 1fr}.actions{grid-template-columns:1fr}.hero h1{font-size:24px}.card strong{font-size:21px}}
+@media(max-width:360px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topline">
+    <a class="back" href="./index.html">← OptiCore Lab</a>
+    <span class="badge">OPTIMIZACIÓN PRO</span>
+  </div>
+
+  <section class="hero">
+    <h1>Smart Boost + Battery Lab</h1>
+    <p>Optimización basada en mediciones reales del motor Android. OptiCore mide la RAM antes y después y no atribuye memoria liberada si Android no la reporta.</p>
+  </section>
+
+  <section class="grid">
+    <article class="card"><span>RAM disponible</span><strong id="ramNow">—</strong><small id="ramMb">Esperando medición</small></article>
+    <article class="card"><span>Candidatos</span><strong id="candidateCount">—</strong><small>Apps de usuario detectadas y permitidas por Android.</small></article>
+    <article class="card"><span>Batería</span><strong id="batteryLevel">—</strong><small id="batteryTemp">Temperatura —</small></article>
+    <article class="card"><span>Ahorro</span><strong id="powerSave">—</strong><small>Estado real del modo de ahorro del sistema.</small></article>
+  </section>
+
+  <section class="section">
+    <h2>Smart Boost</h2>
+    <div class="row"><div><b>Escaneo de memoria</b><small>Lee ActivityManager.MemoryInfo y detecta candidatos compatibles.</small></div><span id="boostState" class="badge">LISTO</span></div>
+    <div class="actions">
+      <button id="scanBtn">Analizar RAM</button>
+      <button id="autoBtn" class="primary">Optimización automática</button>
+      <button id="balancedBtn">Liberación equilibrada</button>
+      <button id="aggressiveBtn" class="danger">Liberación intensiva</button>
+    </div>
+    <div id="boostResult" class="result">Todavía no se ha ejecutado ninguna liberación.</div>
+    <div id="candidateList" class="list"></div>
+    <div class="note">La liberación intensiva puede cerrar aplicaciones de usuario en segundo plano. Android puede reiniciar algunas si las necesita. OptiCore protege componentes del sistema, launcher, teclado y su propio proceso.</div>
+  </section>
+
+  <section class="section">
+    <h2>Diagnóstico de batería</h2>
+    <div class="actions">
+      <button id="batteryBtn">Actualizar batería</button>
+      <button id="batterySettingsBtn">Abrir ahorro de batería</button>
+    </div>
+    <div id="batteryResult" class="result">Sin diagnóstico todavía.</div>
+  </section>
+
+  <section class="section">
+    <h2>Actividad reciente</h2>
+    <div class="actions">
+      <button id="usageBtn">Ver actividad reciente</button>
+      <button id="usageSettingsBtn">Autorizar acceso de uso</button>
+      <button id="releaseBackgroundBtn" class="danger">Liberar apps en segundo plano</button>
+      <button id="selectAllBtn">Seleccionar todas</button>
+      <button id="closeSelectedBtn" class="danger" disabled>Cerrar seleccionadas</button>
+    </div>
+    <div id="usageResult" class="result">OptiCore usa acceso de uso solo para identificar actividad reciente de aplicaciones; no lee su contenido.</div>
+    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre candidatas de usuario permitidas por Android. También puedes marcar aplicaciones concretas y usar “Cerrar seleccionadas”. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
+    <div id="usageList" class="list"></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const embedded=(location.hostname==="127.0.0.1"||location.hostname==="localhost")&&location.port==="8766";
+
+  function n(v,d=1){const x=Number(v);return Number.isFinite(x)?x.toFixed(d):"—"}
+  function setState(text,cls){$("boostState").textContent=text;$("boostState").className="badge "+(cls||"")}
+  async function json(url,opts){const r=await fetch(url,{cache:"no-store",...(opts||{})});if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}
+  function requireEngine(box){if(embedded)return true;box.innerHTML="<strong>Motor Android requerido.</strong><br>Esta vista funciona como demostración visual en la PWA. Abre la misma página desde <b>127.0.0.1:8766</b> para ejecutar acciones reales.";return false}
+
+  function renderScan(d){
+    $("ramNow").textContent=n(d.ram_available_percent)+"%";
+    $("ramMb").textContent=n(d.ram_available_mb)+" MB disponibles";
+    $("candidateCount").textContent=String(d.candidate_count??0);
+    const list=$("candidateList"); list.innerHTML="";
+    (d.candidates||[]).slice(0,12).forEach(x=>{
+      const row=document.createElement("div");row.className="app";
+      row.innerHTML="<span><b>"+escapeHtml(x.label||x.package)+"</b><br><small>"+escapeHtml(x.package)+"</small></span><small>Candidato</small>";
+      list.appendChild(row);
+    });
+    setState("MEDIDO","ok");
+  }
+
+  async function scan(){
+    if(!requireEngine($("boostResult")))return null;
+    setState("MIDIENDO","");
+    const d=await json("./api/boost-scan?t="+Date.now());
+    renderScan(d);
+    $("boostResult").innerHTML="<strong>Escaneo completado.</strong><br>RAM disponible: "+n(d.ram_available_percent)+"% · "+n(d.ram_available_mb)+" MB. Candidatos detectados: "+(d.candidate_count||0)+".";
+    return d;
+  }
+
+  async function run(mode){
+    if(!requireEngine($("boostResult")))return;
+    setState("OPTIMIZANDO","");
+    [$("scanBtn"),$("autoBtn"),$("balancedBtn"),$("aggressiveBtn")].forEach(b=>b.disabled=true);
+    try{
+      const d=await json("./api/boost-run?mode="+encodeURIComponent(mode)+"&t="+Date.now(),{method:"POST"});
+      if(!d.ok){
+        $("boostResult").innerHTML="<strong>No se pudo ejecutar.</strong><br>"+escapeHtml(d.reason||d.message||"Acción bloqueada por Android.");
+        setState("BLOQUEADO","bad");
+        return;
+      }
+      const delta=Number(d.measured_delta_mb)||0;
+      const freed=Number(d.measured_freed_mb)||0;
+      $("ramNow").textContent=n(d.ram_after_percent)+"%";
+      $("ramMb").textContent=n(d.ram_after_mb)+" MB disponibles";
+      $("boostResult").innerHTML=
+        "<strong>Resultado medido</strong><br>"+
+        "RAM antes: "+n(d.ram_before_mb)+" MB<br>"+
+        "RAM después: "+n(d.ram_after_mb)+" MB<br>"+
+        "Cambio medido: "+(delta>=0?"+":"")+n(delta)+" MB<br>"+
+        "Memoria recuperada reportada: <b>"+n(freed)+" MB</b><br>"+
+        "Paquetes a los que se intentó detener: "+(d.attempted_count||0)+".";
+      setState("COMPLETADO","ok");
+      await scan().catch(()=>{});
+    }catch(e){
+      $("boostResult").innerHTML="<strong>Error de optimización.</strong><br>"+escapeHtml(String(e));
+      setState("ERROR","bad");
+    }finally{
+      [$("scanBtn"),$("autoBtn"),$("balancedBtn"),$("aggressiveBtn")].forEach(b=>b.disabled=false);
+    }
+  }
+
+  async function autoRun(){
+    const d=await scan();
+    if(!d)return;
+    const p=Number(d.ram_available_percent)||100;
+    const mode=p<18?"aggressive":"balanced";
+    $("boostResult").innerHTML+="<br>Modo elegido automáticamente: <b>"+(mode==="aggressive"?"intensivo":"equilibrado")+"</b>.";
+    await run(mode);
+  }
+
+  async function battery(){
+    if(!requireEngine($("batteryResult")))return;
+    const d=await json("./api/battery-diagnostics?t="+Date.now());
+    $("batteryLevel").textContent=d.level_percent==null?"—":n(d.level_percent)+"%";
+    $("batteryTemp").textContent="Temperatura "+(d.temperature_c==null?"—":n(d.temperature_c)+" °C")+" · "+(d.voltage_mv==null?"—":d.voltage_mv+" mV");
+    $("powerSave").textContent=d.power_save_mode?"ACTIVO":"INACTIVO";
+    $("batteryResult").innerHTML=
+      "<strong>Diagnóstico medido</strong><br>"+
+      "Nivel: "+(d.level_percent==null?"—":n(d.level_percent)+"%")+" · "+
+      "Temperatura: "+(d.temperature_c==null?"—":n(d.temperature_c)+" °C")+" · "+
+      "Voltaje: "+(d.voltage_mv==null?"—":d.voltage_mv+" mV")+" · "+
+      "Cargando: "+(d.charging?"sí":"no")+" · "+
+      "Ahorro: "+(d.power_save_mode?"activo":"inactivo")+".";
+  }
+
+  async function usage(){
+    if(!requireEngine($("usageResult")))return;
+    const d=await json("./api/recent-usage?t="+Date.now());
+    const list=$("usageList");list.innerHTML="";
+    if(!d.usage_access){
+      $("usageResult").innerHTML="<strong>Acceso de uso pendiente.</strong><br>Autorízalo para listar actividad reciente.";
+      return;
+    }
+    $("usageResult").innerHTML="<strong>Actividad reciente disponible.</strong><br>Se muestran hasta 20 aplicaciones de usuario.";
+    (d.apps||[]).forEach(x=>{
+      const row=document.createElement("div");row.className="app";
+      const label=document.createElement("label");label.className="app-select";
+      const check=document.createElement("input");
+      check.type="checkbox";
+      check.className="appSelect";
+      check.dataset.package=String(x.package||"");
+      check.addEventListener("change",updateSelectionUi);
+      const text=document.createElement("span");
+      text.innerHTML="<b>"+escapeHtml(x.label||x.package)+"</b><br><small>"+escapeHtml(x.package)+"</small>";
+      const age=document.createElement("small");
+      age.textContent=formatAge(x.last_used_ms);
+      label.appendChild(check);
+      label.appendChild(text);
+      row.appendChild(label);
+      row.appendChild(age);
+      list.appendChild(row);
+    });
+    updateSelectionUi();
+  }
+
+  function selectedPackages(){
+    return [...document.querySelectorAll(".appSelect:checked")]
+      .map(x=>x.dataset.package)
+      .filter(Boolean);
+  }
+
+  function updateSelectionUi(){
+    const selected=selectedPackages();
+    $("closeSelectedBtn").disabled=selected.length===0;
+    $("closeSelectedBtn").textContent=selected.length
+      ? "Cerrar seleccionadas ("+selected.length+")"
+      : "Cerrar seleccionadas";
+    const all=[...document.querySelectorAll(".appSelect")];
+    $("selectAllBtn").textContent=all.length>0&&selected.length===all.length
+      ? "Deseleccionar todas"
+      : "Seleccionar todas";
+  }
+
+  function toggleSelectAll(){
+    const all=[...document.querySelectorAll(".appSelect")];
+    if(!all.length){
+      $("usageResult").innerHTML="<strong>Primero carga la actividad reciente.</strong><br>Toca “Ver actividad reciente” para mostrar las aplicaciones.";
+      return;
+    }
+    const mark=!all.every(x=>x.checked);
+    all.forEach(x=>x.checked=mark);
+    updateSelectionUi();
+  }
+
+  async function closeSelectedApps(){
+    if(!requireEngine($("usageResult")))return;
+    const selected=selectedPackages();
+    if(!selected.length){
+      $("usageResult").innerHTML="<strong>No hay aplicaciones seleccionadas.</strong><br>Marca una o más aplicaciones y vuelve a intentarlo.";
+      return;
+    }
+
+    const ok=window.confirm(
+      "OptiCore solicitará a Android liberar "+selected.length+
+      " aplicación(es) seleccionada(s) en segundo plano. Android conserva el control final. ¿Continuar?"
+    );
+    if(!ok)return;
+
+    $("closeSelectedBtn").disabled=true;
+    $("releaseBackgroundBtn").disabled=true;
+    $("usageResult").innerHTML="<strong>Procesando selección...</strong><br>OptiCore está solicitando a Android liberar únicamente las aplicaciones marcadas.";
+
+    try{
+      const q=new URLSearchParams({packages:selected.join(",")});
+      q.set("t",String(Date.now()));
+      const d=await json("./api/release-selected?"+q.toString(),{method:"POST"});
+
+      if(!d.ok){
+        $("usageResult").innerHTML="<strong>No se pudo completar.</strong><br>"+escapeHtml(d.reason||"Acción bloqueada por Android.");
+        return;
+      }
+
+      const delta=Number(d.measured_delta_mb)||0;
+      $("usageResult").innerHTML=
+        "<strong>Selección procesada.</strong><br>"+
+        "Seleccionadas: "+selected.length+" · "+
+        "Solicitudes enviadas: "+(d.attempted_count||0)+" · "+
+        "Omitidas/protegidas: "+(d.skipped_count||0)+".<br>"+
+        "RAM antes: "+n(d.ram_before_mb)+" MB · "+
+        "RAM después: "+n(d.ram_after_mb)+" MB · "+
+        "Cambio medido: "+(delta>=0?"+":"")+n(delta)+" MB.<br>"+
+        "Android decide qué procesos se detienen o se reinician.";
+      await scan().catch(()=>{});
+    }catch(e){
+      $("usageResult").innerHTML="<strong>Error al procesar la selección.</strong><br>"+escapeHtml(String(e));
+    }finally{
+      $("releaseBackgroundBtn").disabled=false;
+      updateSelectionUi();
+    }
+  }
+
+  async function releaseBackgroundApps(){
+    if(!requireEngine($("usageResult")))return;
+    const d=await scan();
+    if(!d)return;
+    const count=Number(d.candidate_count)||0;
+    if(count<1){
+      $("usageResult").innerHTML="<strong>No hay candidatas para liberar.</strong><br>Android no reporta aplicaciones de usuario secundarias disponibles para esta acción.";
+      return;
+    }
+    const ok=window.confirm("OptiCore detectó "+count+" aplicación(es) candidatas en segundo plano. Se ejecutará la liberación manual protegida. ¿Continuar?");
+    if(!ok)return;
+    $("usageResult").innerHTML="<strong>Procesando...</strong><br>OptiCore está ejecutando la liberación manual con las protecciones del sistema.";
+    await run("aggressive");
+    $("usageResult").innerHTML="<strong>Proceso completado.</strong><br>Revisa el resultado medido en Smart Boost. Android conserva el control final sobre sus procesos.";
+  }
+
+  function formatAge(ms){const d=Math.max(0,Date.now()-Number(ms||0));const m=Math.round(d/60000);return m<1?"ahora":m<60?m+" min":Math.round(m/60)+" h"}
+  function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+  async function openSettings(path,box){
+    if(!requireEngine(box))return;
+    try{await json(path,{method:"POST"});}catch(e){box.innerHTML="<strong>No se pudieron abrir los ajustes.</strong>"}
+  }
+
+  $("scanBtn").onclick=()=>scan().catch(e=>$("boostResult").textContent=String(e));
+  $("autoBtn").onclick=()=>autoRun().catch(e=>$("boostResult").textContent=String(e));
+  $("balancedBtn").onclick=()=>run("balanced");
+  $("aggressiveBtn").onclick=()=>run("aggressive");
+  $("batteryBtn").onclick=()=>battery().catch(e=>$("batteryResult").textContent=String(e));
+  $("usageBtn").onclick=()=>usage().catch(e=>$("usageResult").textContent=String(e));
+  $("releaseBackgroundBtn").onclick=()=>releaseBackgroundApps().catch(e=>$("usageResult").textContent=String(e));
+  $("selectAllBtn").onclick=toggleSelectAll;
+  $("closeSelectedBtn").onclick=()=>closeSelectedApps().catch(e=>$("usageResult").textContent=String(e));
+  $("batterySettingsBtn").onclick=()=>openSettings("./api/open-battery-settings",$("batteryResult"));
+  $("usageSettingsBtn").onclick=()=>openSettings("./api/open-usage-settings",$("usageResult"));
+
+  scan().catch(()=>{});
+  battery().catch(()=>{});
+})();
+</script>
+</body>
+</html>

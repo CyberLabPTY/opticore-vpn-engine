@@ -1,0 +1,75 @@
+<style id="qflow-live-v2-style">
+#qflowLiveV2{margin-top:12px;padding:14px;border-radius:16px;border:1px solid rgba(83,223,207,.18);background:linear-gradient(145deg,rgba(5,22,34,.96),rgba(7,34,48,.86));overflow:hidden}
+.qf-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.qf-title{font-size:14px;font-weight:900;letter-spacing:.055em;color:#eefaff}
+.qf-real{font-size:9px;font-weight:900;letter-spacing:.11em;padding:6px 9px;border-radius:999px;color:#8effc4;background:rgba(73,227,138,.08);border:1px solid rgba(73,227,138,.25)}
+.qf-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.qf-cell{padding:11px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);min-width:0}
+.qf-k{font-size:10px;letter-spacing:.045em;color:#7894a5}
+.qf-v{font-size:17px;font-weight:900;margin-top:5px;color:#eefaff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qf-v.rx{color:#53dfcf}.qf-v.tx{color:#5bc0eb}
+.qf-meter{margin-top:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.045)}
+.qf-meter-head{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:10px;color:#839dab;margin-bottom:7px}
+.qf-track{height:7px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.qf-fill{height:100%;width:0;border-radius:999px;transition:width .45s ease}
+#qfRxFill{background:linear-gradient(90deg,#1c756f,#53dfcf)}
+#qfTxFill{background:linear-gradient(90deg,#285c86,#5bc0eb)}
+.qf-chart{margin-top:12px;padding:9px;border-radius:14px;background:rgba(0,0,0,.13);border:1px solid rgba(255,255,255,.045)}
+#qfCanvas{display:block;width:100%;height:112px}
+.qf-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;font-size:10px;color:#7894a5;flex-wrap:wrap}
+.qf-burst{padding:5px 8px;border-radius:999px;border:1px solid rgba(83,223,207,.18);color:#9ab3c0}
+.qf-burst.hot{color:#ffd67a;border-color:rgba(255,190,70,.30);background:rgba(255,190,70,.07)}
+@media(max-width:430px){.qf-v{font-size:15px}.qf-grid{gap:7px}.qf-cell{padding:10px}}
+</style>
+<script id="qflow-live-v2">
+(function(){
+var API="http://127.0.0.1:8767/status";
+var rxHistory=[];
+var txHistory=[];
+var MAX_POINTS=48;
+function num(v){v=Number(v);return Number.isFinite(v)&&v>0?v:0}
+function fmtRate(v){v=num(v);if(v>=1048576)return (v/1048576).toFixed(2)+" MB/s";if(v>=1024)return (v/1024).toFixed(1)+" KB/s";return Math.round(v)+" B/s"}
+function fmtBytes(v){v=num(v);if(v>=1073741824)return (v/1073741824).toFixed(2)+" GB";if(v>=1048576)return (v/1048576).toFixed(2)+" MB";if(v>=1024)return (v/1024).toFixed(1)+" KB";return Math.round(v)+" B"}
+function ensure(){
+var host=document.getElementById("ocSecurityMonitor");
+if(!host)return null;
+var old=document.getElementById("qflowLiveV2");
+if(old)return old;
+var box=document.createElement("section");
+box.id="qflowLiveV2";
+box.innerHTML=`<div class="qf-head"><div class="qf-title">Q-FLOW LIVE TELEMETRY</div><div class="qf-real">WIREGUARD REAL</div></div><div class="qf-grid"><div class="qf-cell"><div class="qf-k">↓ DESCARGA RX</div><div id="qfRxRate" class="qf-v rx">0 B/s</div></div><div class="qf-cell"><div class="qf-k">↑ SUBIDA TX</div><div id="qfTxRate" class="qf-v tx">0 B/s</div></div><div class="qf-cell"><div class="qf-k">RX ACUMULADO</div><div id="qfRxTotal" class="qf-v">0 B</div></div><div class="qf-cell"><div class="qf-k">TX ACUMULADO</div><div id="qfTxTotal" class="qf-v">0 B</div></div></div><div class="qf-meter"><div class="qf-meter-head"><span>RX EWMA</span><span id="qfRxSmooth">0 B/s</span></div><div class="qf-track"><div id="qfRxFill" class="qf-fill"></div></div><div class="qf-meter-head" style="margin-top:10px"><span>TX EWMA</span><span id="qfTxSmooth">0 B/s</span></div><div class="qf-track"><div id="qfTxFill" class="qf-fill"></div></div></div><div class="qf-chart"><canvas id="qfCanvas"></canvas></div><div class="qf-foot"><span id="qfSamples">Esperando telemetría...</span><span id="qfActivity">Actividad --</span><span id="qfBurst" class="qf-burst">FLUJO ESTABLE</span></div>`;
+host.appendChild(box);
+return box;
+}
+function historyPush(a,b){rxHistory.push(a);txHistory.push(b);if(rxHistory.length>MAX_POINTS)rxHistory.shift();if(txHistory.length>MAX_POINTS)txHistory.shift()}
+function activityIndex(v){v=num(v);var max=5*1024*1024;var x=Math.log1p(v)/Math.log1p(max);return Math.max(0,Math.min(100,Math.round(x*100)))}
+function draw(){
+var canvas=document.getElementById("qfCanvas");if(!canvas)return;
+var rect=canvas.getBoundingClientRect();var dpr=Math.min(window.devicePixelRatio||1,2);var w=Math.max(280,Math.round(rect.width));var h=112;
+canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+var c=canvas.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+c.strokeStyle="rgba(255,255,255,.055)";c.lineWidth=1;
+for(var g=1;g<4;g++){var gy=Math.round(h*g/4)+.5;c.beginPath();c.moveTo(0,gy);c.lineTo(w,gy);c.stroke()}
+var maxV=1;for(var i=0;i<rxHistory.length;i++){maxV=Math.max(maxV,rxHistory[i],txHistory[i])}
+function line(arr,color){if(arr.length<2)return;c.beginPath();for(var j=0;j<arr.length;j++){var x=(j/(MAX_POINTS-1))*w;var y=h-8-(arr[j]/maxV)*(h-18);if(j===0)c.moveTo(x,y);else c.lineTo(x,y)}c.strokeStyle=color;c.lineWidth=2;c.stroke()}
+line(rxHistory,"#53dfcf");line(txHistory,"#5bc0eb");
+}
+function setText(id,value){var e=document.getElementById(id);if(e)e.textContent=value}
+async function refresh(){
+if(!ensure())return;
+try{
+var r=await fetch(API+"?qflow="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);var d=await r.json();
+if(d.telemetry_source!=="wireguard_backend")throw new Error("Fuente no válida");
+var rx=num(d.rx_bps),tx=num(d.tx_bps),rxs=num(d.rx_ewma_bps),txs=num(d.tx_ewma_bps);
+setText("qfRxRate",fmtRate(rx));setText("qfTxRate",fmtRate(tx));setText("qfRxTotal",fmtBytes(d.rx_bytes));setText("qfTxTotal",fmtBytes(d.tx_bytes));setText("qfRxSmooth",fmtRate(rxs));setText("qfTxSmooth",fmtRate(txs));
+var combined=rxs+txs;var act=activityIndex(combined);setText("qfActivity","Actividad log "+act+"/100");
+var rxFill=document.getElementById("qfRxFill"),txFill=document.getElementById("qfTxFill");if(rxFill)rxFill.style.width=activityIndex(rxs)+"%";if(txFill)txFill.style.width=activityIndex(txs)+"%";
+var burst=document.getElementById("qfBurst");if(burst){if(d.burst){burst.className="qf-burst hot";burst.textContent="RÁFAGA z="+Number(d.burst_z||0).toFixed(2)}else{burst.className="qf-burst";burst.textContent="FLUJO ESTABLE"}}
+setText("qfSamples","Muestras "+Number(d.telemetry_samples||0)+" · "+(d.connected?"Túnel activo":"Túnel inactivo"));
+historyPush(rxs,txs);draw();
+}catch(e){setText("qfSamples","Telemetría temporalmente no disponible")}
+}
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){ensure();refresh()})}else{ensure();refresh()}
+setInterval(refresh,1000);window.addEventListener("focus",refresh);window.addEventListener("resize",draw);
+})();
+</script>

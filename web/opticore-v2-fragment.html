@@ -1,0 +1,37 @@
+<section id="opticore-bridge-v1" style="margin:18px 0;padding:18px;border:1px solid rgba(72,213,202,.28);border-radius:18px;background:rgba(7,27,41,.86)">
+<div style="font-size:22px;font-weight:800;color:#eef7ff">Privacidad + OptiCore VPN</div>
+<div style="margin-top:7px;color:#9fb9c8;line-height:1.5">Estado externo de tu conexión y acceso directo al motor VPN Android.</div>
+<div style="display:grid;gap:10px;margin-top:16px">
+<div style="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)"><div style="font-size:12px;color:#7f9aaa">IP pública actual</div><div id="opticorePublicIp" style="font-size:18px;font-weight:800;margin-top:4px">Comprobando...</div></div>
+<div style="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)"><div style="font-size:12px;color:#7f9aaa">Salida de Internet</div><div id="opticoreLocation" style="font-size:16px;font-weight:700;margin-top:4px">Comprobando...</div></div>
+<div style="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)"><div style="font-size:12px;color:#7f9aaa">Estado de red</div><div id="opticoreNetwork" style="font-size:16px;font-weight:700;margin-top:4px">Analizando...</div></div>
+</div>
+<button id="opticoreRefresh" style="width:100%;margin-top:14px;padding:14px;border-radius:14px;border:1px solid rgba(72,213,202,.3);background:#12384b;color:#eef7ff;font-weight:800">Actualizar privacidad</button>
+<a href="opticorevpn://control" style="display:block;margin-top:10px;padding:14px 16px;border-radius:14px;text-align:center;text-decoration:none;font-weight:800;background:#17485b;color:#eef7ff">Abrir OptiCore VPN</a>
+<div style="margin-top:12px;font-size:12px;line-height:1.5;color:#718b99">La web muestra la salida visible en Internet. El túnel VPN se administra dentro de OptiCore.</div>
+</section>
+<script id="opticore-bridge-v2-script">
+(function(){
+var ip=document.getElementById("opticorePublicIp");
+var loc=document.getElementById("opticoreLocation");
+var net=document.getElementById("opticoreNetwork");
+var btn=document.getElementById("opticoreRefresh");
+async function refreshPrivacy(){
+if(!navigator.onLine){net.textContent="SIN CONEXIÓN";ip.textContent="No disponible";loc.textContent="No disponible";return;}
+net.textContent="INTERNET ACTIVO";ip.textContent="Comprobando...";loc.textContent="Comprobando...";btn.disabled=true;
+try{
+var r=await fetch("https://ipapi.co/json/?t="+Date.now(),{cache:"no-store"});
+if(!r.ok)throw new Error("http");
+var d=await r.json();
+ip.textContent=d.ip||"No disponible";
+var p=[];if(d.country_name)p.push(d.country_name);if(d.city)p.push(d.city);
+loc.textContent=p.length?p.join(" · "):"Ubicación no disponible";
+}catch(e){ip.textContent="No se pudo consultar";loc.textContent="Consulta externa no disponible";}
+btn.disabled=false;
+}
+btn.addEventListener("click",refreshPrivacy);
+window.addEventListener("online",refreshPrivacy);
+window.addEventListener("offline",refreshPrivacy);
+refreshPrivacy();
+})();
+</script>

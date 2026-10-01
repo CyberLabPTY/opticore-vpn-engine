@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="es">
+<head><style id="opticore-no-flash">html{background:#06131e}body{opacity:1;transition:opacity .14s ease}html.oc-prepaint body{opacity:0;visibility:hidden}</style><script id="opticore-prepaint">document.documentElement.classList.add("oc-prepaint");window.addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){document.documentElement.classList.remove("oc-prepaint");});});});setTimeout(function(){document.documentElement.classList.remove("oc-prepaint");},2500);</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07131f">
+
+<style>
+:root{
+  --bg:#07131f;--panel:#0c1c2b;--panel2:#102437;--line:#20384c;
+  --text:#edf7ff;--muted:#91a6b8;--accent:#47d7c8;--accent2:#70a8ff;
+  --ok:#62df9c;--warn:#ffd06f;--lock:#aab7c3
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:
+  radial-gradient(circle at 90% 0,#132d46 0,transparent 32rem),var(--bg);
+  color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif
+}
+.wrap{width:min(980px,calc(100% - 20px));margin:auto;padding:20px 0 70px}
+.top,.heroTop,.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;gap:10px;align-items:center}
+.logo{width:42px;height:42px;border:1px solid #2b786f;border-radius:13px;background:linear-gradient(145deg,#11372f,#102039);position:relative}
+.logo:after{content:"";position:absolute;inset:11px;border:2px solid var(--accent);border-radius:5px}
+h1,h2,h3,p{margin:0}
+h1{font-size:17px}
+h2{font-size:15px;margin-bottom:9px}
+h3{font-size:12px}
+.muted,.note,small{color:var(--muted)}
+.muted{font-size:11px;margin-top:3px}
+.tag,.st{font-size:10px;padding:5px 8px;border:1px solid var(--line);border-radius:999px}
+.tag{color:var(--accent)}
+.hero,.card,.panel{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel),#091724);border-radius:18px}
+.hero{padding:17px;margin-top:16px}
+.hero p{margin-top:6px;line-height:1.5;color:var(--muted);max-width:680px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn,.mode{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:10px 12px;border-radius:11px}
+.btn.primary{border:0;background:linear-gradient(135deg,var(--accent),#54adff);color:#041217;font-weight:800}
+#file{display:none}
+.meta,.grid{display:grid;gap:10px;margin-top:12px}
+.meta{grid-template-columns:repeat(3,1fr)}
+.meta div{border:1px solid #172f42;background:#081522;padding:9px;border-radius:10px}
+.meta span{display:block;color:var(--muted);font-size:10px}
+.grid{grid-template-columns:repeat(3,1fr)}
+.card{padding:13px;min-height:140px}
+.value{font-size:26px;font-weight:850;margin:12px 0 4px}
+.note{font-size:10px;line-height:1.4}
+.st{display:inline-block;margin-top:9px;font-weight:800}
+.ok{color:var(--ok);border-color:#285f48}
+.warn{color:var(--warn);border-color:#63502c}
+.lock{color:var(--lock)}
+.section{margin-top:17px}
+.panel{overflow:hidden}
+.row{padding:12px 13px;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.row strong{font-size:12px}
+.right{text-align:right;font-size:11px}
+.modes{display:flex;gap:7px;flex-wrap:wrap;padding:12px}
+.mode.active{background:var(--accent);color:#041217;font-weight:800}
+.info{margin-top:8px;color:var(--muted);font-size:10px;line-height:1.5}
+.toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,25px);opacity:0;background:#122b42;border:1px solid #31516b;padding:10px 12px;border-radius:10px;transition:.2s;max-width:90%;font-size:11px}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr 1fr}.meta{grid-template-columns:1fr}
+}
+@media(max-width:390px){
+  .value{font-size:22px}.card{padding:11px}
+}
+</style>
+<style id="ui-polish-v2">
+.row > div:first-child > strong{display:block;margin-bottom:3px}
+.row > div:first-child > small{display:block;margin-top:2px;line-height:1.35}
+.row .right{flex-shrink:0;margin-left:12px}
+.row{align-items:center}
+.modes{gap:8px}
+.mode{min-height:44px}
+.card .note{margin-top:6px}
+@media(max-width:390px){
+  .row{gap:10px}
+  .row .right{max-width:48%}
+  .mode{padding:10px 12px}
+}
+</style><link rel="stylesheet" href="/professional-ui.css?v=3"><link id="oc-favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%2307131d%22/%3E%3Cpath d=%22M32 7 51 15v14c0 13-8 23-19 28-11-5-19-15-19-28V15z%22 fill=%22none%22 stroke=%22%2353dfcf%22 stroke-width=%224%22/%3E%3Cpath d=%22M21 31h8l4-10 5 22 4-12h7%22 fill=%22none%22 stroke=%22%235bc0eb%22 stroke-width=%224%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E"><title>OptiCore Lab | Diagnóstico y Optimización Android</title><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icon-192.svg"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script defer src="/pwa-install.js?v=3"></script></head>
+<body>
+<main class="wrap">
+<header class="top">
+  <div class="brand">
+    <div class="logo"></div>
+    <div>
+      <h1>OptiCore Lab</h1>
+      <div class="muted">Diagnóstico local - sin root</div>
+    </div>
+  </div>
+  <span class="tag">ENGINE 1.4</span>
+</header>
+
+<section class="hero">
+  <div class="heroTop">
+    <div>
+      <h2 id="model">Dispositivo</h2>
+      <p>Panel basado en mediciones reales. Las funciones bloqueadas por Android se muestran como protegidas.</p>
+    </div>
+    <span class="tag" id="net">RED -</span>
+  </div>
+
+  <div class="btns">
+    <button class="btn primary" id="reload">Actualizar diagnostico</button>
+    <button class="btn" id="import">Importar JSON</button>
+    <input id="file" type="file" accept=".json,application/json">
+  </div>
+
+  <div class="meta">
+    <div><span>Android</span><b id="android">-</b></div>
+    <div><span>Panel cargado</span><b id="time">-</b></div>
+    <div><span>Fuente</span><b id="source">local</b></div>
+  </div>
+</section>
+
+<section class="grid">
+  <article class="card">
+    <h3>RAM disponible</h3>
+    <div class="value" id="ram">-</div>
+    <div class="note">Medición real. Smart Boost puede liberar procesos de usuario permitidos por Android.</div>
+    <span class="st" id="ramS">-</span>
+  </article>
+
+  <article class="card">
+    <h3>Swap usado</h3>
+    <div class="value" id="swap">-</div>
+    <div class="note">Indicador de presion de memoria.</div>
+    <span class="st" id="swapS">-</span>
+  </article>
+
+  <article class="card">
+    <h3>GPU</h3>
+    <div class="value" id="gpu">-</div>
+    <div class="note">Frecuencia actual / maxima. No representa porcentaje de uso.</div>
+    <span class="st ok">LECTURA REAL</span>
+  </article>
+
+  <article class="card">
+    <h3>Batería</h3>
+    <div class="value" id="temp">-</div>
+    <div class="note">Temperatura reportada por el sensor.</div>
+    <span class="st ok">MONITOREO</span>
+  </article>
+
+  <article class="card">
+    <h3>Cache visible</h3>
+    <div class="value" id="cache">-</div>
+    <div class="note">Solo cache externa accesible.</div>
+    <span class="st" id="cacheS">-</span>
+  </article>
+
+  <article class="card">
+    <h3>Dumpstate</h3>
+    <div class="value" style="font-size:20px">Protegido</div>
+    <div class="note">Los logs del sistema no son accesibles desde esta shell.</div>
+    <span class="st lock">SIN ROOT</span>
+  </article>
+</section>
+
+<section class="section">
+  <h2>Red inteligente</h2>
+  <div class="panel">
+    <div class="row">
+      <div><strong>Cloudflare</strong><small>Ping / HTTPS</small></div>
+      <div class="right"><b id="cfp">-</b> ms<br><span id="cfh">-</span> s</div>
+    </div>
+    <div class="row">
+      <div><strong>Quad9</strong><small>Ping medido</small></div>
+      <div class="right"><b id="q9p">-</b> ms</div>
+    </div>
+    <div class="row">
+      <div><strong>Google</strong><small>Ping / HTTPS</small></div>
+      <div class="right"><b id="gp">-</b> ms<br><span id="gh">-</span> s</div>
+    </div>
+    <div class="row">
+      <div><strong>Selección automática</strong><small id="netAdvice">Necesita varias muestras antes de cambiar DNS.</small></div>
+      <span class="tag">ANALISIS</span>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Cámara inteligente</h2>
+  <div class="panel">
+    <div class="row">
+      <div><strong>Camera2</strong><small>Capacidades declaradas del dispositivo</small></div>
+      <div class="right" id="cam">-</div>
+    </div>
+    <div class="row">
+      <div><strong>Camera Lab Pro</strong><small>Captura, diagnóstico de luz/detalle, mejora real, comparación antes/después y exportación.</small></div>
+      <a class="btn primary" href="./camera-lab-pro.html" style="text-decoration:none;text-align:center">Abrir laboratorio</a>
+    </div>
+  </div>
+  <div class="info">El procesamiento se realiza localmente sobre la imagen capturada. No altera el firmware ni los parámetros internos de la cámara Samsung.</div>
+</section>
+
+<section class="section">
+  <h2>Optimización segura</h2>
+  <div class="panel">
+    <div class="row">
+      <div><strong>Smart Boost + batería</strong><small>RAM antes/después, liberación equilibrada o intensiva, actividad reciente y diagnóstico de batería.</small></div>
+      <a class="btn primary" href="./optimizer-pro.html" style="text-decoration:none;text-align:center">Abrir Optimización Pro</a>
+    </div>
+    <div class="row">
+      <div><strong>RAM / CPU</strong><small id="ramAdvice">-</small></div>
+      <button class="btn" id="rbtn">Diagnóstico</button>
+    </div>
+    <div class="row">
+      <div><strong>Cache</strong><small id="cacheAdvice">-</small></div>
+      <button class="btn" id="cbtn">Preparar limpieza</button>
+    </div>
+    <div class="row">
+      <div><strong>DNS</strong><small>No se cambia automáticamente hasta validar estabilidad y reversión.</small></div>
+      <button class="btn" id="dbtn">Criterio</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const FALLBACK={
+  engine_version:"1.1",
+  model:"SM-G955U",
+  android:"9",
+  ram_available_percent:26.7,
+  ram_state:"NORMAL",
+  swap_used_percent:64.8,
+  swap_state:"MODERADO",
+  gpu_current_mhz:257,
+  gpu_max_mhz:670,
+  battery_celsius:"34.7",
+  cache_visible_mb:212.3,
+  cache_state:"MODERADO",
+  network_interface:"wlan0",
+  cloudflare_ping_ms:"21.960",
+  quad9_ping_ms:"16.871",
+  google_ping_ms:"85.851",
+  cloudflare_doh_seconds:"0.177300",
+  google_doh_seconds:"0.331557",
+  camera_manual_sensor:1,
+  camera_manual_processing:1,
+  camera_raw:1,
+  camera_full:1
+};
+
+let DATA=FALLBACK;
+const $=id=>document.getElementById(id);
+
+function toast(msg){
+  const t=$("toast");
+  t.textContent=msg;
+  t.classList.add("on");
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer=setTimeout(()=>t.classList.remove("on"),2200);
+}
+
+function stateClass(v){
+  if(v==="NORMAL"||v==="BAJO") return "ok";
+  if(v==="MODERADO") return "warn";
+  return "lock";
+}
+
+function render(d,source){
+  DATA=d;
+  $("model").textContent=d.model||"Dispositivo";
+  $("android").textContent="Android "+(d.android||"-");
+  $("time").textContent=new Date().toLocaleTimeString();
+  $("source").textContent=source;
+  $("net").textContent="RED "+String(d.network_interface||"-").toUpperCase();
+
+  $("ram").textContent=d.ram_available_percent+"%";
+  $("swap").textContent=d.swap_used_percent+"%";
+  $("gpu").textContent=d.gpu_current_mhz+" / "+d.gpu_max_mhz+" MHz";
+  $("temp").textContent=d.battery_celsius+" C";
+  $("cache").textContent=d.cache_visible_mb+" MB";
+
+  [["ramS",d.ram_state],["swapS",d.swap_state],["cacheS",d.cache_state]].forEach(([id,val])=>{
+    const el=$(id);
+    el.textContent=val;
+    el.className="st "+stateClass(val);
+  });
+
+  $("cfp").textContent=d.cloudflare_ping_ms;
+  $("q9p").textContent=d.quad9_ping_ms;
+  $("gp").textContent=d.google_ping_ms;
+  $("cfh").textContent=d.cloudflare_doh_seconds;
+  $("gh").textContent=d.google_doh_seconds;
+
+  const caps=[];
+  if(+d.camera_manual_sensor) caps.push("SENSOR");
+  if(+d.camera_manual_processing) caps.push("POST");
+  if(+d.camera_raw) caps.push("RAW");
+  if(+d.camera_full) caps.push("FULL");
+  $("cam").textContent=caps.join(" - ")||"No detectado";
+
+  $("ramAdvice").textContent=
+    d.ram_state==="NORMAL"
+      ?"RAM dentro del rango normal; no conviene forzar limpieza."
+      :"Revisar presion de memoria antes de actuar.";
+
+  $("cacheAdvice").textContent=
+    d.cache_visible_mb+" MB visibles; cualquier borrado requerira confirmacion.";
+
+  const samples=[
+    ["Cloudflare",Number(d.cloudflare_ping_ms)],
+    ["Quad9",Number(d.quad9_ping_ms)],
+    ["Google",Number(d.google_ping_ms)]
+  ].filter(x=>Number.isFinite(x[1])).sort((a,b)=>a[1]-b[1]);
+
+  if(samples[0]){
+    $("netAdvice").textContent=
+      "Menor ping de esta muestra: "+samples[0][0]+
+      ". Aun no basta para cambiar DNS.";
+  }
+}
+
+async function loadJson(){
+  try{
+    const r=await fetch("data/device-status.json?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP");
+    const d=await r.json();
+    render(d,"device-status.json");
+    toast("Diagnóstico cargado");
+  }catch(e){
+    render(DATA,"linea base");
+    toast("Usando linea base. Puedes importar el JSON.");
+  }
+}
+
+$("reload").onclick=loadJson;
+$("import").onclick=()=>$("file").click();
+
+$("file").onchange=async e=>{
+  try{
+    const file=e.target.files[0];
+    if(!file) return;
+    const d=JSON.parse(await file.text());
+    render(d,"JSON importado");
+    toast("JSON importado");
+  }catch(e){
+    toast("JSON no valido");
+  }
+};
+
+document.querySelectorAll(".mode[data-m]").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll(".mode[data-m]").forEach(x=>x.classList.remove("active"));
+    btn.classList.add("active");
+    localStorage.setItem("dolCam",btn.dataset.m);
+    toast("Perfil "+btn.dataset.m+" seleccionado");
+  };
+});
+
+const resetCameraMode=$("reset");
+if(resetCameraMode){
+  resetCameraMode.onclick=()=>{
+    localStorage.removeItem("dolCam");
+    document.querySelectorAll(".mode[data-m]").forEach(x=>{
+      x.classList.toggle("active",x.dataset.m==="AUTO");
+    });
+    toast("Perfil restaurado a Auto");
+  };
+}
+
+$("rbtn").onclick=()=>{
+  toast(DATA.ram_state==="NORMAL"
+    ?"No se recomienda liberar RAM agresivamente."
+    :"Primero hay que medir la presion real de memoria.");
+};
+
+$("cbtn").onclick=()=>{
+  toast("Modo seguro: todavia no se ha borrado nada.");
+};
+
+$("dbtn").onclick=()=>{
+  toast("DNS automatico: multiples muestras, estabilidad y reversion.");
+};
+
+const savedMode=localStorage.getItem("dolCam");
+if(savedMode){
+  document.querySelectorAll(".mode[data-m]").forEach(x=>{
+    x.classList.toggle("active",x.dataset.m===savedMode);
+  });
+}
+
+render(FALLBACK,"linea base");
+loadJson();
+</script>
+<script src="/live.js?v=3"></script><script src="/smart-clean.js?v=3"></script><script src="/professional-ui.js?v=3"></script><script src="/cache-sync.js?v=3"></script><script src="/connection-guard.js?v=3"></script><script src="/resource-panel.js?v=3"></script><script src="/resource-summary.js?v=3"></script><section id="opticore-bridge-v1" style="margin:18px 0;padding:18px;border:1px solid rgba(72,213,202,.28);border-radius:18px;background:rgba(7,27,41,.86)">
+<div style="font-size:22px;font-weight:800;color:#eef7ff">Privacidad + OptiCore VPN</div>
+<div style="margin-top:7px;color:#9fb9c8;line-height:1.5">Estado externo de tu conexión y acceso directo al motor VPN Android.</div>
+<div style="display:grid;gap:10px;margin-top:16px">
+<div style="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)"><div style="font-size:12px;color:#7f9aaa">IP pública actual</div><div id="opticorePublicIp" style="font-size:18px;font-weight:800;margin-top:4px">Comprobando...</div></div>
+<div style="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)"><div style="font-size:12px;color:#7f9aaa">Salida de Internet</div><div id="opticoreLocation" style="font-size:16px;font-weight:700;margin-top:4px">Comprobando...</div></div>
+<div style="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)"><div style="font-size:12px;color:#7f9aaa">Estado de red</div><div id="opticoreNetwork" style="font-size:16px;font-weight:700;margin-top:4px">Analizando...</div></div>
+</div>
+<button id="opticoreRefresh" style="width:100%;margin-top:14px;padding:14px;border-radius:14px;border:1px solid rgba(72,213,202,.3);background:#12384b;color:#eef7ff;font-weight:800">Actualizar privacidad</button>
+<a href="opticorevpn://control" style="display:block;margin-top:10px;padding:14px 16px;border-radius:14px;text-align:center;text-decoration:none;font-weight:800;background:#17485b;color:#eef7ff">Abrir OptiCore VPN</a>
+<div style="margin-top:12px;font-size:12px;line-height:1.5;color:#718b99">La web muestra la salida visible en Internet. El túnel VPN se administra dentro de OptiCore.</div>
+</section>
+<script id="opticore-bridge-v2-script">
+(function(){
+var ip=document.getElementById("opticorePublicIp");
+var loc=document.getElementById("opticoreLocation");
+var net=document.getElementById("opticoreNetwork");
+var btn=document.getElementById("opticoreRefresh");
+async function refreshPrivacy(){
+if(!navigator.onLine){net.textContent="SIN CONEXIÓN";ip.textContent="No disponible";loc.textContent="No disponible";return;}
+net.textContent="INTERNET ACTIVO";ip.textContent="Comprobando...";loc.textContent="Comprobando...";btn.disabled=true;
+try{
+var r=await fetch("https://ipapi.co/json/?t="+Date.now(),{cache:"no-store"});
+if(!r.ok)throw new Error("http");
+var d=await r.json();
+ip.textContent=d.ip||"No disponible";
+var p=[];if(d.country_name)p.push(d.country_name);if(d.city)p.push(d.city);
+loc.textContent=p.length?p.join(" · "):"Ubicación no disponible";
+}catch(e){ip.textContent="No se pudo consultar";loc.textContent="Consulta externa no disponible";}
+btn.disabled=false;
+}
+btn.addEventListener("click",refreshPrivacy);
+window.addEventListener("online",refreshPrivacy);
+window.addEventListener("offline",refreshPrivacy);
+refreshPrivacy();
+})();
+</script>
+<section id="developer-contact-v3" style="margin:18px 0;padding:20px;border:1px solid rgba(72,213,202,.28);border-radius:20px;background:rgba(7,27,41,.86);text-align:center">
+<div style="font-size:22px;font-weight:800;color:#eef7ff">Contacto del desarrollador</div>
+<div style="margin-top:7px;color:#9fb9c8;line-height:1.5">Toca una aplicación para comunicarte directamente.</div>
+<div style="display:flex;justify-content:center;align-items:center;gap:26px;margin-top:20px">
+<a href="whatsapp://send?phone=50767833122" aria-label="Abrir WhatsApp" title="WhatsApp" style="width:76px;height:76px;display:flex;align-items:center;justify-content:center;border-radius:22px;background:#25D366;box-shadow:0 8px 22px rgba(0,0,0,.28);text-decoration:none;transition:transform .15s ease">
+<svg viewBox="0 0 32 32" width="47" height="47" aria-hidden="true"><path fill="#fff" d="M16.03 4C9.39 4 4 9.39 4 16.03c0 2.12.55 4.18 1.59 6L4 28l6.13-1.55a12 12 0 0 0 5.9 1.55h.01C22.68 28 28 22.61 28 16S22.67 4 16.03 4zm0 21.98h-.01a9.94 9.94 0 0 1-5.06-1.39l-.36-.21-3.64.92.97-3.54-.24-.37A9.96 9.96 0 1 1 16.03 25.98zm5.47-7.46c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.27-.47-2.42-1.5-.89-.8-1.5-1.78-1.67-2.08-.18-.3-.02-.46.13-.61.14-.14.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.08-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.21 5.08 4.5.71.31 1.27.49 1.7.63.71.23 1.36.2 1.87.12.57-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35z"/></svg>
+</a>
+<a href="tg://resolve?domain=kc_c1990" aria-label="Abrir Telegram" title="Telegram" style="width:76px;height:76px;display:flex;align-items:center;justify-content:center;border-radius:22px;background:#229ED9;box-shadow:0 8px 22px rgba(0,0,0,.28);text-decoration:none;transition:transform .15s ease">
+<svg viewBox="0 0 240 240" width="48" height="48" aria-hidden="true"><path fill="#fff" d="M179.1 69.3L54.5 117.3c-8.5 3.4-8.4 8.1-1.6 10.2l31.9 10 73.8-46.6c3.5-2.1 6.7-1 4.1 1.3l-59.8 54-2.2 32.8c3.2 0 4.6-1.5 6.4-3.2l15.4-15 32 23.6c5.9 3.2 10.1 1.6 11.6-5.5l21.2-99.8c2.2-8.7-3.3-12.6-8.2-10.4z"/></svg>
+</a>
+</div>
+<div style="margin-top:18px;font-size:12px;color:#718b99">© 2026 K.M.D.L.C.C. · Todos los derechos reservados.</div>
+</section>
+<style id="opticore-status-pro-v1">
+.oc-secmon{margin:14px 0 16px;padding:15px;border-radius:18px;background:linear-gradient(145deg,rgba(7,26,40,.96),rgba(10,39,55,.82));border:1px solid rgba(83,223,207,.20);box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.oc-sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.oc-pill{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;font-size:13px;font-weight:900;letter-spacing:.04em;border:1px solid rgba(255,255,255,.08)}
+.oc-dot{width:11px;height:11px;border-radius:50%}
+.oc-pill.on{color:#a8ffd0;background:rgba(28,101,68,.25);border-color:rgba(73,227,138,.32)}
+.oc-pill.on .oc-dot{background:#49e38a;animation:ocPulse 1.7s infinite}
+.oc-pill.off{color:#ffb0bd;background:rgba(105,30,47,.25);border-color:rgba(255,95,122,.30)}
+.oc-pill.off .oc-dot{background:#ff5f7a}
+.oc-pill.wait{color:#ffe09b;background:rgba(113,83,22,.22);border-color:rgba(244,185,66,.28)}
+.oc-pill.wait .oc-dot{background:#f4b942;animation:ocPulseAmber 1.4s infinite}
+.oc-pill.na{color:#b8c9d5;background:rgba(80,95,108,.20);border-color:rgba(160,180,195,.18)}
+.oc-pill.na .oc-dot{background:#8297a5}
+.oc-live{font-size:10px;font-weight:900;letter-spacing:.12em;color:#53dfcf;padding:6px 9px;border-radius:999px;border:1px solid rgba(83,223,207,.22);background:rgba(83,223,207,.06)}
+.oc-flow{display:flex;align-items:center;gap:12px;margin-top:14px;padding:13px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}
+.oc-bars{height:24px;display:flex;align-items:flex-end;gap:4px;min-width:42px}
+.oc-bars i{display:block;width:5px;border-radius:999px;background:linear-gradient(180deg,#53dfcf,#5bc0eb);transform-origin:bottom;animation:ocBar 1s ease-in-out infinite}
+.oc-bars i:nth-child(1){height:8px;animation-delay:0s}.oc-bars i:nth-child(2){height:15px;animation-delay:.12s}.oc-bars i:nth-child(3){height:23px;animation-delay:.24s}.oc-bars i:nth-child(4){height:15px;animation-delay:.36s}.oc-bars i:nth-child(5){height:9px;animation-delay:.48s}
+.oc-bars.idle i{animation:none;opacity:.18}
+.oc-flow-main{min-width:0;flex:1}.oc-flow-title{font-size:13px;font-weight:900;color:#eef7ff}.oc-flow-sub{font-size:11px;color:#7894a5;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oc-sec-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.oc-mini{padding:11px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}
+.oc-mini-k{font-size:11px;color:#7894a5}.oc-mini-v{margin-top:4px;font-size:14px;font-weight:850;color:#eef7ff}
+@keyframes ocBar{0%,100%{transform:scaleY(.35);opacity:.4}50%{transform:scaleY(1);opacity:1}}
+@keyframes ocPulse{0%{box-shadow:0 0 0 0 rgba(73,227,138,.55)}70%{box-shadow:0 0 0 10px rgba(73,227,138,0)}100%{box-shadow:0 0 0 0 rgba(73,227,138,0)}}
+@keyframes ocPulseAmber{0%{box-shadow:0 0 0 0 rgba(244,185,66,.5)}70%{box-shadow:0 0 0 10px rgba(244,185,66,0)}100%{box-shadow:0 0 0 0 rgba(244,185,66,0)}}
+</style>
+<script id="opticore-status-pro-v1-script">
+(function(){
+function fmt(total){total=Math.max(0,Number(total)||0);var h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=Math.floor(total%60);function p(n){return n<10?"0"+n:n}return h>0?h+":"+p(m)+":"+p(s):p(m)+":"+p(s)}
+function ensure(){var host=document.getElementById("opticore-bridge-v1");if(!host)return null;var box=document.getElementById("ocSecurityMonitor");if(box)return box;box=document.createElement("div");box.id="ocSecurityMonitor";box.className="oc-secmon";box.innerHTML="<div class=\"oc-sec-head\"><div id=\"ocMainPill\" class=\"oc-pill wait\"><span class=\"oc-dot\"></span><span id=\"ocMainText\">VERIFICANDO VPN</span></div><div class=\"oc-live\">LIVE</div></div><div class=\"oc-flow\"><div id=\"ocBars\" class=\"oc-bars idle\"><i></i><i></i><i></i><i></i><i></i></div><div class=\"oc-flow-main\"><div id=\"ocFlowTitle\" class=\"oc-flow-title\">Analizando túnel seguro</div><div id=\"ocFlowSub\" class=\"oc-flow-sub\">Esperando estado de OptiCore</div></div></div><div class=\"oc-sec-grid\"><div class=\"oc-mini\"><div class=\"oc-mini-k\">Estado del túnel</div><div id=\"ocTunnelPro\" class=\"oc-mini-v\">Comprobando...</div></div><div class=\"oc-mini\"><div class=\"oc-mini-k\">Sesión protegida</div><div id=\"ocSessionPro\" class=\"oc-mini-v\">--</div></div></div>";var grid=document.getElementById("opticoreNetwork");var anchor=grid&&grid.parentElement&&grid.parentElement.parentElement;if(anchor&&anchor.parentElement===host)host.insertBefore(box,anchor);else host.appendChild(box);return box}
+function paint(mode,d){ensure();var pill=document.getElementById("ocMainPill"),txt=document.getElementById("ocMainText"),bars=document.getElementById("ocBars"),title=document.getElementById("ocFlowTitle"),sub=document.getElementById("ocFlowSub"),tun=document.getElementById("ocTunnelPro"),ses=document.getElementById("ocSessionPro");if(!pill)return;pill.className="oc-pill "+mode;if(mode==="on"){txt.textContent="VPN PROTEGIDA";bars.className="oc-bars";title.textContent="CANAL CIFRADO ACTIVO";sub.textContent=d&&d.endpoint?d.endpoint:"OptiCore VPN";tun.textContent="WireGuard conectado";ses.textContent=fmt(d&&d.connected_seconds)}else if(mode==="off"){txt.textContent="VPN DESCONECTADA";bars.className="oc-bars idle";title.textContent="TÚNEL INACTIVO";sub.textContent="El tráfico no está usando OptiCore VPN";tun.textContent="Desconectado";ses.textContent="00:00"}else if(mode==="na"){txt.textContent="OPTICORE NO DISPONIBLE";bars.className="oc-bars idle";title.textContent="MONITOR SIN RESPUESTA";sub.textContent="Abre OptiCore para recuperar el estado";tun.textContent="No disponible";ses.textContent="--"}else{txt.textContent="VERIFICANDO VPN";bars.className="oc-bars";title.textContent="ANALIZANDO TÚNEL";sub.textContent="Consultando OptiCore local";tun.textContent="Comprobando...";ses.textContent="--"}}
+async function refresh(){ensure();if(!navigator.onLine){paint("off");return}try{var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("http");var d=await r.json();paint(d.connected?"on":"off",d)}catch(e){paint("na")}}
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){ensure();refresh()})}else{ensure();refresh()}
+setInterval(refresh,3000);window.addEventListener("focus",refresh);window.addEventListener("online",refresh);window.addEventListener("offline",refresh);
+})();
+</script>
+<style id="qflow-live-v2-style">
+#qflowLiveV2{margin-top:12px;padding:14px;border-radius:16px;border:1px solid rgba(83,223,207,.18);background:linear-gradient(145deg,rgba(5,22,34,.96),rgba(7,34,48,.86));overflow:hidden}
+.qf-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.qf-title{font-size:14px;font-weight:900;letter-spacing:.055em;color:#eefaff}
+.qf-real{font-size:9px;font-weight:900;letter-spacing:.11em;padding:6px 9px;border-radius:999px;color:#8effc4;background:rgba(73,227,138,.08);border:1px solid rgba(73,227,138,.25)}
+.qf-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.qf-cell{padding:11px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);min-width:0}
+.qf-k{font-size:10px;letter-spacing:.045em;color:#7894a5}
+.qf-v{font-size:17px;font-weight:900;margin-top:5px;color:#eefaff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qf-v.rx{color:#53dfcf}.qf-v.tx{color:#5bc0eb}
+.qf-meter{margin-top:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.045)}
+.qf-meter-head{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:10px;color:#839dab;margin-bottom:7px}
+.qf-track{height:7px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.qf-fill{height:100%;width:0;border-radius:999px;transition:width .45s ease}
+#qfRxFill{background:linear-gradient(90deg,#1c756f,#53dfcf)}
+#qfTxFill{background:linear-gradient(90deg,#285c86,#5bc0eb)}
+.qf-chart{margin-top:12px;padding:9px;border-radius:14px;background:rgba(0,0,0,.13);border:1px solid rgba(255,255,255,.045)}
+#qfCanvas{display:block;width:100%;height:112px}
+.qf-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;font-size:10px;color:#7894a5;flex-wrap:wrap}
+.qf-burst{padding:5px 8px;border-radius:999px;border:1px solid rgba(83,223,207,.18);color:#9ab3c0}
+.qf-burst.hot{color:#ffd67a;border-color:rgba(255,190,70,.30);background:rgba(255,190,70,.07)}
+@media(max-width:430px){.qf-v{font-size:15px}.qf-grid{gap:7px}.qf-cell{padding:10px}}
+</style>
+<script id="qflow-live-v2">
+(function(){
+var API="http://127.0.0.1:8767/status";
+var rxHistory=[];
+var txHistory=[];
+var MAX_POINTS=48;
+function num(v){v=Number(v);return Number.isFinite(v)&&v>0?v:0}
+function fmtRate(v){v=num(v);if(v>=1048576)return (v/1048576).toFixed(2)+" MB/s";if(v>=1024)return (v/1024).toFixed(1)+" KB/s";return Math.round(v)+" B/s"}
+function fmtBytes(v){v=num(v);if(v>=1073741824)return (v/1073741824).toFixed(2)+" GB";if(v>=1048576)return (v/1048576).toFixed(2)+" MB";if(v>=1024)return (v/1024).toFixed(1)+" KB";return Math.round(v)+" B"}
+function ensure(){
+var host=document.getElementById("ocSecurityMonitor");
+if(!host)return null;
+var old=document.getElementById("qflowLiveV2");
+if(old)return old;
+var box=document.createElement("section");
+box.id="qflowLiveV2";
+box.innerHTML=`<div class="qf-head"><div class="qf-title">Q-FLOW LIVE TELEMETRY</div><div class="qf-real">WIREGUARD REAL</div></div><div class="qf-grid"><div class="qf-cell"><div class="qf-k">↓ DESCARGA RX</div><div id="qfRxRate" class="qf-v rx">0 B/s</div></div><div class="qf-cell"><div class="qf-k">↑ SUBIDA TX</div><div id="qfTxRate" class="qf-v tx">0 B/s</div></div><div class="qf-cell"><div class="qf-k">RX ACUMULADO</div><div id="qfRxTotal" class="qf-v">0 B</div></div><div class="qf-cell"><div class="qf-k">TX ACUMULADO</div><div id="qfTxTotal" class="qf-v">0 B</div></div></div><div class="qf-meter"><div class="qf-meter-head"><span>RX EWMA</span><span id="qfRxSmooth">0 B/s</span></div><div class="qf-track"><div id="qfRxFill" class="qf-fill"></div></div><div class="qf-meter-head" style="margin-top:10px"><span>TX EWMA</span><span id="qfTxSmooth">0 B/s</span></div><div class="qf-track"><div id="qfTxFill" class="qf-fill"></div></div></div><div class="qf-chart"><canvas id="qfCanvas"></canvas></div><div class="qf-foot"><span id="qfSamples">Esperando telemetría...</span><span id="qfActivity">Actividad --</span><span id="qfBurst" class="qf-burst">FLUJO ESTABLE</span></div>`;
+host.appendChild(box);
+return box;
+}
+function historyPush(a,b){rxHistory.push(a);txHistory.push(b);if(rxHistory.length>MAX_POINTS)rxHistory.shift();if(txHistory.length>MAX_POINTS)txHistory.shift()}
+function activityIndex(v){v=num(v);var max=5*1024*1024;var x=Math.log1p(v)/Math.log1p(max);return Math.max(0,Math.min(100,Math.round(x*100)))}
+function draw(){
+var canvas=document.getElementById("qfCanvas");if(!canvas)return;
+var rect=canvas.getBoundingClientRect();var dpr=Math.min(window.devicePixelRatio||1,2);var w=Math.max(280,Math.round(rect.width));var h=112;
+canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+var c=canvas.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+c.strokeStyle="rgba(255,255,255,.055)";c.lineWidth=1;
+for(var g=1;g<4;g++){var gy=Math.round(h*g/4)+.5;c.beginPath();c.moveTo(0,gy);c.lineTo(w,gy);c.stroke()}
+var maxV=1;for(var i=0;i<rxHistory.length;i++){maxV=Math.max(maxV,rxHistory[i],txHistory[i])}
+function line(arr,color){if(arr.length<2)return;c.beginPath();for(var j=0;j<arr.length;j++){var x=(j/(MAX_POINTS-1))*w;var y=h-8-(arr[j]/maxV)*(h-18);if(j===0)c.moveTo(x,y);else c.lineTo(x,y)}c.strokeStyle=color;c.lineWidth=2;c.stroke()}
+line(rxHistory,"#53dfcf");line(txHistory,"#5bc0eb");
+}
+function setText(id,value){var e=document.getElementById(id);if(e)e.textContent=value}
+async function refresh(){
+if(!ensure())return;
+try{
+var r=await fetch(API+"?qflow="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);var d=await r.json();
+if(d.telemetry_source!=="wireguard_backend")throw new Error("Fuente no válida");
+var rx=num(d.rx_bps),tx=num(d.tx_bps),rxs=num(d.rx_ewma_bps),txs=num(d.tx_ewma_bps);
+setText("qfRxRate",fmtRate(rx));setText("qfTxRate",fmtRate(tx));setText("qfRxTotal",fmtBytes(d.rx_bytes));setText("qfTxTotal",fmtBytes(d.tx_bytes));setText("qfRxSmooth",fmtRate(rxs));setText("qfTxSmooth",fmtRate(txs));
+var combined=rxs+txs;var act=activityIndex(combined);setText("qfActivity","Actividad log "+act+"/100");
+var rxFill=document.getElementById("qfRxFill"),txFill=document.getElementById("qfTxFill");if(rxFill)rxFill.style.width=activityIndex(rxs)+"%";if(txFill)txFill.style.width=activityIndex(txs)+"%";
+var burst=document.getElementById("qfBurst");if(burst){if(d.burst){burst.className="qf-burst hot";burst.textContent="RÁFAGA z="+Number(d.burst_z||0).toFixed(2)}else{burst.className="qf-burst";burst.textContent="FLUJO ESTABLE"}}
+setText("qfSamples","Muestras "+Number(d.telemetry_samples||0)+" · "+(d.connected?"Túnel activo":"Túnel inactivo"));
+historyPush(rxs,txs);draw();
+}catch(e){setText("qfSamples","Telemetría temporalmente no disponible")}
+}
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){ensure();refresh()})}else{ensure();refresh()}
+setInterval(refresh,1000);window.addEventListener("focus",refresh);window.addEventListener("resize",draw);
+})();
+</script>
+</body>
+</html><script id="opticore-live-v3">
+(function(){
+  var net=document.getElementById("opticoreNetwork");
+  var refresh=document.getElementById("opticoreRefresh");
+  if(!net)return;
+
+  var grid=net.parentElement&&net.parentElement.parentElement;
+  if(!grid)return;
+
+  function addCard(id,label){
+    if(document.getElementById(id))return;
+    var card=document.createElement("div");
+    card.style.cssText="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)";
+    var title=document.createElement("div");
+    title.style.cssText="font-size:12px;color:#7f9aaa";
+    title.textContent=label;
+    var value=document.createElement("div");
+    value.id=id;
+    value.style.cssText="font-size:16px;font-weight:800;margin-top:4px";
+    value.textContent="Comprobando...";
+    card.appendChild(title);
+    card.appendChild(value);
+    grid.appendChild(card);
+  }
+
+  addCard("opticoreVpnState","OptiCore VPN");
+  addCard("opticoreEndpoint","Servidor VPN");
+  addCard("opticoreConfigState","Configuración");
+  addCard("opticoreConnectedTime","Tiempo conectado");
+  addCard("opticoreVersion","Versión instalada");
+
+  var vpn=document.getElementById("opticoreVpnState");
+  var endpoint=document.getElementById("opticoreEndpoint");
+  var config=document.getElementById("opticoreConfigState");
+  var duration=document.getElementById("opticoreConnectedTime");
+  var version=document.getElementById("opticoreVersion");
+
+  function pad(n){
+    n=Number(n)||0;
+    return n<10?"0"+n:String(n);
+  }
+
+  function formatTime(total){
+    total=Math.max(0,Number(total)||0);
+    var h=Math.floor(total/3600);
+    var m=Math.floor((total%3600)/60);
+    var s=Math.floor(total%60);
+    if(h>0)return h+":"+pad(m)+":"+pad(s);
+    return pad(m)+":"+pad(s);
+  }
+
+  async function readOptiCore(){
+    try{
+      var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{
+        cache:"no-store"
+      });
+
+      if(!r.ok)throw new Error("HTTP "+r.status);
+
+      var d=await r.json();
+
+      vpn.textContent=d.connected?
+        "PROTECCIÓN ACTIVA":
+        "DESCONECTADA";
+
+      endpoint.textContent=d.endpoint||"--";
+      config.textContent=d.has_config?
+        "GUARDADA":
+        "NO GUARDADA";
+
+      duration.textContent=d.connected?
+        formatTime(d.connected_seconds):
+        "00:00";
+
+      version.textContent=d.version||"--";
+
+      if(!navigator.onLine){
+        net.textContent="SIN CONEXIÓN";
+      }else if(d.connected){
+        net.textContent="INTERNET + VPN ACTIVOS";
+      }else{
+        net.textContent="INTERNET ACTIVO · VPN DESCONECTADA";
+      }
+
+    }catch(e){
+      vpn.textContent="OPTICORE NO DISPONIBLE";
+      endpoint.textContent="--";
+      config.textContent="No disponible";
+      duration.textContent="--";
+      version.textContent="--";
+
+      if(navigator.onLine){
+        net.textContent="INTERNET ACTIVO · ESTADO VPN NO DISPONIBLE";
+      }else{
+        net.textContent="SIN CONEXIÓN";
+      }
+    }
+  }
+
+  if(refresh){
+    refresh.addEventListener("click",function(){
+      setTimeout(readOptiCore,150);
+    });
+  }
+
+  window.addEventListener("focus",readOptiCore);
+  document.addEventListener("visibilitychange",function(){
+    if(!document.hidden)readOptiCore();
+  });
+
+  readOptiCore();
+  setInterval(readOptiCore,5000);
+})();
+</script>

@@ -1,10 +1,15 @@
 name: Build OptiCore VPN APK
 
+concurrency:
+  group: opticore-build-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - opticore-polish-v017
 
 jobs:
   build:
@@ -13,6 +18,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Verify unified web source
+        run: |
+          test -f web/index.html
+          test -f web/app.js
+          test -f web/styles.css
+          test -f web/manifest.webmanifest
+          test -f web/sw.js
+          test -f web/icon-192.png
+          test -f web/icon-512.png
+          node --check web/app.js
+          python -m json.tool web/manifest.webmanifest >/dev/null
 
       - name: Set up Java 17
         uses: actions/setup-java@v6
@@ -37,6 +54,25 @@ jobs:
           path: ~/.android/debug.keystore
           key: opticore-debug-keystore-v1
 
+      - name: Verify one interface source for PWA and APK
+        run: |
+          gradle :app:generateOptiCorePanelAssets
+          python - <<'PY'
+          import hashlib, pathlib, zipfile, sys
+          web = pathlib.Path("web")
+          bundle = pathlib.Path("app/build/generated/opticorePanelAssets/panel-bundle.zip")
+          required = ["index.html","styles.css","app.js","manifest.webmanifest","sw.js"]
+          with zipfile.ZipFile(bundle) as z:
+              for name in required:
+                  a = (web / name).read_bytes()
+                  b = z.read(name)
+                  if a != b:
+                      print(f"MISMATCH: {name}", file=sys.stderr)
+                      sys.exit(1)
+                  print(name, hashlib.sha256(a).hexdigest())
+          print("PWA and embedded APK panel use identical canonical web files.")
+          PY
+
       - name: Build APK
         run: gradle :app:assembleDebug --stacktrace
 
@@ -48,4 +84,11 @@ jobs:
         with:
           name: OptiCore-VPN-Engine
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload Web/PWA preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiCore-Web-PWA
+          path: web/
           if-no-files-found: error

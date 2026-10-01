@@ -153,6 +153,10 @@ public final class MainActivity extends Activity {
             root.addView(storage);
         }
 
+        Button usage = button("Autorizar acceso de uso");
+        usage.setOnClickListener(v -> openUsageAccess());
+        root.addView(usage);
+
         Button panel = button("Abrir panel OptiCore");
         panel.setOnClickListener(v -> openPanel());
         root.addView(panel);
@@ -329,6 +333,17 @@ public final class MainActivity extends Activity {
                             ? "Análisis de caché autorizado"
                             : "Permiso de caché no concedido",
                     Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void openUsageAccess() {
+        try {
+            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
+        } catch (Exception e) {
+            Toast.makeText(
+                    this,
+                    "No se pudieron abrir los ajustes de acceso de uso",
+                    Toast.LENGTH_SHORT).show();
         }
     }
 

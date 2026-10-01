@@ -128,7 +128,7 @@ public final class LocalStatusServer {
         }
     }
 
-    private static String buildStatusJson() {
+    static String buildStatusJson() {
         boolean connected = EngineService.isConnected();
         long since = EngineService.getConnectedSince();
         long seconds = 0L;

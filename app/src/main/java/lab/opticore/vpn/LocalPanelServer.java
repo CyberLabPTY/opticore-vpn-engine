@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.Settings;
 import android.net.ConnectivityManager;
 import android.net.LinkProperties;
 import android.net.Network;
@@ -275,7 +276,8 @@ public final class LocalPanelServer {
                 return;
             }
 
-            if (!"GET".equals(method)) {
+            if (!"GET".equals(method) &&
+                    !"POST".equals(method)) {
                 sendJson(
                         socket,
                         405,
@@ -307,7 +309,164 @@ public final class LocalPanelServer {
                 path = "/index.html";
             }
 
+            if ("POST".equals(method) &&
+                    !"/api/vpn-connect".equals(path) &&
+                    !"/api/vpn-disconnect".equals(path) &&
+                    !"/api/boost-run".equals(path) &&
+                    !"/api/release-selected".equals(path) &&
+                    !"/api/open-battery-settings".equals(path) &&
+                    !"/api/open-usage-settings".equals(path)) {
+                sendJson(
+                        socket,
+                        405,
+                        jsonError(
+                                "method_not_allowed"));
+                return;
+            }
+
             switch (path) {
+
+                case "/api/boost-scan":
+                    sendJson(
+                            socket,
+                            200,
+                            SmartBoostEngine.scan(appContext).toString());
+                    return;
+
+                case "/api/boost-run":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError(
+                                        "method_not_allowed"));
+                        return;
+                    }
+
+                    Map<String, String> boostQuery =
+                            parseQuery(query);
+
+                    boolean aggressive =
+                            "aggressive".equalsIgnoreCase(
+                                    boostQuery.get("mode"));
+
+                    sendJson(
+                            socket,
+                            200,
+                            SmartBoostEngine
+                                    .boost(
+                                            appContext,
+                                            aggressive)
+                                    .toString());
+                    return;
+
+                case "/api/release-selected":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError(
+                                        "method_not_allowed"));
+                        return;
+                    }
+
+                    Map<String, String> selectedQuery =
+                            parseQuery(query);
+
+                    sendJson(
+                            socket,
+                            200,
+                            SelectedAppRelease
+                                    .run(
+                                            appContext,
+                                            selectedQuery.get("packages"))
+                                    .toString());
+                    return;
+
+                case "/api/battery-diagnostics":
+                    sendJson(
+                            socket,
+                            200,
+                            SmartBoostEngine
+                                    .batteryDiagnostics(
+                                            appContext)
+                                    .toString());
+                    return;
+
+                case "/api/open-battery-settings":
+                    openSettings(
+                            Settings.ACTION_BATTERY_SAVER_SETTINGS);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"battery_settings\"}");
+                    return;
+
+                case "/api/open-usage-settings":
+                    openSettings(
+                            Settings.ACTION_USAGE_ACCESS_SETTINGS);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"usage_settings\"}");
+                    return;
+
+                case "/api/recent-usage":
+                    sendJson(
+                            socket,
+                            200,
+                            SmartBoostEngine
+                                    .recentUsage(
+                                            appContext)
+                                    .toString());
+                    return;
+
+                case "/api/vpn-status":
+                    sendJson(
+                            socket,
+                            200,
+                            LocalStatusServer.buildStatusJson());
+                    return;
+
+                case "/api/vpn-connect":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError(
+                                        "method_not_allowed"));
+                        return;
+                    }
+
+                    startEngineAction(
+                            EngineService.ACTION_CONNECT);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"connect\"}");
+                    return;
+
+                case "/api/vpn-disconnect":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError(
+                                        "method_not_allowed"));
+                        return;
+                    }
+
+                    startEngineAction(
+                            EngineService.ACTION_DISCONNECT);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"disconnect\"}");
+                    return;
 
                 case "/api/refresh":
                     sendJson(
@@ -321,7 +480,7 @@ public final class LocalPanelServer {
                         sendJson(
                                 socket,
                                 200,
-                                "{\"ok\":true,\"engine\":\"opticore-embedded\",\"version\":\"0.1.5\"}");
+                                "{\"ok\":true,\"engine\":\"opticore-embedded\",\"version\":\"" + appVersion() + "\"}");
                     } else {
                         sendJson(
                                 socket,
@@ -460,6 +619,15 @@ public final class LocalPanelServer {
         }
     }
 
+    private static void openSettings(String action) {
+        try {
+            Intent intent = new Intent(action);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            appContext.startActivity(intent);
+        } catch (Throwable ignored) {
+        }
+    }
+
     private static String buildDeviceStatusJson() {
         try {
             MemorySnapshot memory =
@@ -473,7 +641,7 @@ public final class LocalPanelServer {
 
             out.put(
                     "engine_version",
-                    "1.5-embedded");
+                    appVersion() + "-embedded");
 
             out.put(
                     "updated_at",
@@ -2292,7 +2460,7 @@ public final class LocalPanelServer {
 
             connection.setRequestProperty(
                     "User-Agent",
-                    "OptiCore/0.1.4");
+                    "OptiCore/" + appVersion());
 
             if (cloudflare) {
                 connection.setRequestProperty(
@@ -2483,7 +2651,7 @@ public final class LocalPanelServer {
                         "Access-Control-Allow-Origin: " +
                         ALLOWED_ORIGIN +
                         "\r\n" +
-                        "Access-Control-Allow-Methods: GET, OPTIONS\r\n" +
+                        "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" +
                         "X-Content-Type-Options: nosniff\r\n" +
                         "Cache-Control: no-store\r\n" +
                         "Connection: close\r\n\r\n";
@@ -2533,6 +2701,11 @@ public final class LocalPanelServer {
         }
 
         if (path.endsWith(
+                ".png")) {
+            return "image/png";
+        }
+
+        if (path.endsWith(
                 ".json")) {
             return "application/json; charset=utf-8";
         }
@@ -2561,6 +2734,42 @@ public final class LocalPanelServer {
 
         } catch (Throwable ignored) {
             return "{\"ok\":false,\"error\":\"unknown\"}";
+        }
+    }
+
+    private static void startEngineAction(
+            String action) {
+
+        Intent intent =
+                new Intent(
+                        appContext,
+                        EngineService.class);
+
+        intent.setAction(
+                action);
+
+        if (Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O) {
+
+            appContext.startForegroundService(
+                    intent);
+
+        } else {
+            appContext.startService(
+                    intent);
+        }
+    }
+
+    private static String appVersion() {
+        try {
+            return appContext
+                    .getPackageManager()
+                    .getPackageInfo(
+                            appContext.getPackageName(),
+                            0)
+                    .versionName;
+        } catch (Throwable ignored) {
+            return "unknown";
         }
     }
 
