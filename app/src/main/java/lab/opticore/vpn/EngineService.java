@@ -30,6 +30,8 @@ public final class EngineService extends Service {
             "lab.opticore.vpn.DISCONNECT";
     public static final String ACTION_ALWAYS_ON =
             "lab.opticore.vpn.ALWAYS_ON";
+    public static final String ACTION_PANEL =
+            "lab.opticore.vpn.PANEL";
 
     private static final String CHANNEL =
             "opticore_vpn_engine";
@@ -107,6 +109,8 @@ public final class EngineService extends Service {
             disconnect();
         } else if (ACTION_ALWAYS_ON.equals(action)) {
             connect();
+        } else if (ACTION_PANEL.equals(action)) {
+            // Keep the foreground process alive for the embedded local panel.
         } else if (Prefs.autoReconnect(this)) {
             connect();
         }

@@ -13,6 +13,7 @@ public final class OptiCoreApp extends Application {
         super.onCreate();
 
         LocalStatusServer.start(this);
+        LocalPanelServer.start(this);
 
         GoBackend.setAlwaysOnCallback(() -> {
             Intent i = new Intent(this, EngineService.class);

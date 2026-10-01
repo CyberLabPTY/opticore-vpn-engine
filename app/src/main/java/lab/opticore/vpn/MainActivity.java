@@ -1,8 +1,11 @@
 package lab.opticore.vpn;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 public final class MainActivity extends Activity {
 
     private static final int VPN_REQUEST = 41;
+    private static final int STORAGE_REQUEST = 42;
     private SecureStore secureStore;
     private EditText config;
     private TextView status;
@@ -139,6 +143,16 @@ public final class MainActivity extends Activity {
         refresh.setOnClickListener(v -> { refreshStatus(); Dashboard.refresh(this, secureStore, connectionInfo); });
         root.addView(refresh);
 
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            Button storage = button("Autorizar análisis de caché");
+            storage.setOnClickListener(v -> requestStorageAccess());
+            root.addView(storage);
+        }
+
+        Button panel = button("Abrir panel OptiCore");
+        panel.setOnClickListener(v -> openPanel());
+        root.addView(panel);
+
         Switch auto = new Switch(this);
         auto.setText("Reconectar automáticamente");
         auto.setTextColor(Color.WHITE);
@@ -249,6 +263,82 @@ public final class MainActivity extends Activity {
             startForegroundService(i);
         } else {
             startService(i);
+        }
+    }
+
+    private void requestStorageAccess() {
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            Toast.makeText(
+                    this,
+                    "Android protege /Android/data en esta versión",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        boolean read = checkSelfPermission(
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+
+        boolean write = checkSelfPermission(
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+
+        if (read && write) {
+            Toast.makeText(
+                    this,
+                    "Acceso de caché ya autorizado",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        requestPermissions(
+                new String[] {
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                },
+                STORAGE_REQUEST);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode,
+            String[] permissions,
+            int[] grantResults) {
+
+        super.onRequestPermissionsResult(
+                requestCode,
+                permissions,
+                grantResults);
+
+        if (requestCode == STORAGE_REQUEST) {
+            boolean granted =
+                    checkSelfPermission(
+                            Manifest.permission.READ_EXTERNAL_STORAGE)
+                            == PackageManager.PERMISSION_GRANTED
+                    && checkSelfPermission(
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            == PackageManager.PERMISSION_GRANTED;
+
+            Toast.makeText(
+                    this,
+                    granted
+                            ? "Análisis de caché autorizado"
+                            : "Permiso de caché no concedido",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void openPanel() {
+        try {
+            startActivity(
+                    new Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("http://127.0.0.1:8766/")));
+        } catch (Exception e) {
+            Toast.makeText(
+                    this,
+                    "No se pudo abrir el panel OptiCore",
+                    Toast.LENGTH_SHORT).show();
         }
     }
 
