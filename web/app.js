@@ -7,7 +7,8 @@ const state = {
   stream: null,
   lastPhoto: null,
   cacheEntries: [],
-  deviceInfo: null
+  deviceInfo: null,
+  vpnTimer: null
 };
 
 function setText(id, value){ const el=$(id); if(el) el.textContent = value == null || value === '' ? '—' : String(value); }
@@ -15,11 +16,11 @@ function fmtMb(v){ const n=Number(v); return Number.isFinite(n) ? n.toFixed(1)+'
 function fmtMhz(v){ const n=Number(v); return Number.isFinite(n) && n>0 ? Math.round(n)+' MHz' : 'N/D'; }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
-async function fetchJson(url, timeout=12000){
+async function fetchJson(url, timeout=12000, options={}){
   const c = new AbortController();
   const t = setTimeout(()=>c.abort(), timeout);
   try{
-    const r = await fetch(url,{cache:'no-store',signal:c.signal});
+    const r = await fetch(url,{cache:'no-store',signal:c.signal,...options});
     if(!r.ok) throw new Error('HTTP '+r.status);
     return await r.json();
   } finally { clearTimeout(t); }
@@ -31,6 +32,88 @@ function browserNetwork(){
   setText('netRtt', c && Number.isFinite(c.rtt) ? c.rtt+' ms' : 'N/D');
   setText('netDown', c && Number.isFinite(c.downlink) ? c.downlink+' Mbps' : 'N/D');
   setText('networkState', navigator.onLine ? 'Conectada' : 'Sin conexión');
+}
+
+function formatDuration(seconds){
+  const total=Math.max(0,Number(seconds)||0);
+  const h=Math.floor(total/3600), m=Math.floor((total%3600)/60), s=Math.floor(total%60);
+  return h>0 ? h+' h '+String(m).padStart(2,'0')+' min' : m>0 ? m+' min '+String(s).padStart(2,'0')+' s' : s+' s';
+}
+
+function formatRate(v){
+  const n=Math.max(0,Number(v)||0);
+  if(n>=1024*1024) return (n/(1024*1024)).toFixed(1)+' MB/s';
+  if(n>=1024) return (n/1024).toFixed(1)+' KB/s';
+  return Math.round(n)+' B/s';
+}
+
+function renderWebVpn(){
+  setText('vpnState','Requiere app');
+  $('vpnState').className='mini warn';
+  setText('vpnProtection','VPN disponible mediante el motor Android');
+  setText('vpnDetail','La PWA pública conserva la misma interfaz, pero una página web no puede crear ni controlar por sí sola un túnel WireGuard del sistema.');
+  setText('vpnEndpoint','Motor Android');
+  setText('vpnConfig','Desde la app');
+  setText('vpnUptime','—');
+  setText('vpnTraffic','—');
+  $('vpnShield').className='vpn-shield wait';
+  $('vpnConnectBtn').disabled=true;
+  $('vpnDisconnectBtn').disabled=true;
+  $('vpnRefreshBtn').disabled=true;
+}
+
+function renderVpnStatus(d){
+  const connected=!!d.connected;
+  const configured=!!d.has_config;
+  setText('vpnState',connected?'Activa':'Desconectada');
+  $('vpnState').className='mini '+(connected?'ok':'off');
+  setText('vpnProtection',connected?'PROTECCIÓN ACTIVA':'VPN DESCONECTADA');
+  setText('vpnEndpoint',configured?(d.endpoint&&d.endpoint!=='--'?d.endpoint:'Guardado'):'Sin configuración');
+  setText('vpnConfig',configured?'GUARDADA':'PENDIENTE');
+  setText('vpnUptime',connected?formatDuration(d.connected_seconds):'—');
+  setText('vpnTraffic',connected?formatRate(d.rx_bps)+' / '+formatRate(d.tx_bps):'0 B/s / 0 B/s');
+  $('vpnShield').className='vpn-shield '+(connected?'':'off');
+  $('vpnConnectBtn').disabled=connected||!configured;
+  $('vpnDisconnectBtn').disabled=!connected;
+  $('vpnRefreshBtn').disabled=false;
+  let detail=connected?'WireGuard está activo y el motor Android está reportando telemetría local.':configured?'La configuración WireGuard está guardada. Puedes conectar la protección.':'Abre el motor Android para autorizar la VPN y guardar la configuración WireGuard.';
+  if(d.last_error){
+    detail=d.last_error==='VPN_PERMISSION_REQUIRED'?'Falta autorizar la VPN en Android. Abre el motor Android y toca “Autorizar VPN en Android”.':d.last_error;
+  }
+  setText('vpnDetail',detail);
+  setText('vpnMessage',d.last_error?detail:'Los controles de esta sección actúan únicamente sobre el motor VPN local de OptiCore.');
+}
+
+async function refreshVpn(){
+  if(!state.embedded){ renderWebVpn(); return; }
+  try{
+    const d=await fetchJson('./api/vpn-status',6000);
+    renderVpnStatus(d);
+  }catch(e){
+    setText('vpnState','Motor sin respuesta');
+    $('vpnState').className='mini warn';
+    setText('vpnProtection','No se pudo leer el estado de la VPN');
+    setText('vpnDetail','El panel continúa disponible. Abre el motor Android si necesitas reactivar el servicio local.');
+    $('vpnShield').className='vpn-shield wait';
+    $('vpnConnectBtn').disabled=true;
+    $('vpnDisconnectBtn').disabled=true;
+  }
+}
+
+async function vpnAction(action){
+  if(!state.embedded) return;
+  const connect=action==='connect';
+  const btn=connect?$('vpnConnectBtn'):$('vpnDisconnectBtn');
+  btn.disabled=true;
+  setText('vpnMessage',connect?'Conectando protección…':'Desconectando VPN…');
+  try{
+    await fetchJson(connect?'./api/vpn-connect':'./api/vpn-disconnect',8000,{method:'POST'});
+    await new Promise(r=>setTimeout(r,connect?1500:600));
+    await refreshVpn();
+  }catch(e){
+    setText('vpnMessage','No se pudo enviar la orden al motor Android.');
+    await refreshVpn();
+  }
 }
 
 async function refreshEmbedded(){
@@ -79,6 +162,7 @@ async function refreshAll(){
   $('refreshAll').textContent='Diagnosticando…';
   try{
     if(state.embedded) await refreshEmbedded(); else refreshBrowser();
+    await refreshVpn();
   }catch(e){
     refreshBrowser();
     $('resourceSource').textContent='Modo web';
@@ -233,6 +317,9 @@ function setup(){
   browserNetwork(); renderCapabilities(); setupPwa(); refreshAll();
 
   $('refreshAll').addEventListener('click',refreshAll);
+  $('vpnConnectBtn').addEventListener('click',()=>vpnAction('connect'));
+  $('vpnDisconnectBtn').addEventListener('click',()=>vpnAction('disconnect'));
+  $('vpnRefreshBtn').addEventListener('click',refreshVpn);
   $('dnsBtn').addEventListener('click',analyzeDns);
   $('scanCacheBtn').addEventListener('click',scanCache);
   $('cleanSelectedBtn').addEventListener('click',cleanSelected);
@@ -245,5 +332,6 @@ function setup(){
   window.addEventListener('online',()=>{setText('onlineBadge','Red disponible');browserNetwork();});
   window.addEventListener('offline',()=>{setText('onlineBadge','Sin conexión');browserNetwork();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAll();});
+  if(state.embedded) state.vpnTimer=setInterval(refreshVpn,2500);
 }
 document.addEventListener('DOMContentLoaded',setup);
