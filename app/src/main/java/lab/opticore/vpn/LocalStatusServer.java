@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -31,20 +32,36 @@ public final class LocalStatusServer {
     }
 
     private static void runServer() {
-        try {
-            ServerSocket server = new ServerSocket(
-                    PORT,
-                    8,
-                    InetAddress.getByName("127.0.0.1")
-            );
+        /*
+         * El servidor de estado no debe morir por un cambio de red,
+         * un reinicio temporal del proceso o un puerto ocupado durante
+         * unos segundos. Se mantiene ligado únicamente a loopback.
+         */
+        while (started) {
+            try (ServerSocket server = new ServerSocket()) {
+                server.setReuseAddress(true);
+                server.bind(
+                        new InetSocketAddress(
+                                InetAddress.getByName("127.0.0.1"),
+                                PORT),
+                        8);
 
-            while (true) {
-                Socket socket = server.accept();
-                handle(socket);
+                while (started) {
+                    Socket socket = server.accept();
+                    handle(socket);
+                }
+
+            } catch (Exception ignored) {
+                sleepQuietly(1500L);
             }
+        }
+    }
 
-        } catch (Exception e) {
-            started = false;
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
