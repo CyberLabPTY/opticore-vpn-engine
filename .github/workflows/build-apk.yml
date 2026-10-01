@@ -22,6 +22,10 @@ jobs:
           test -f web/styles.css
           test -f web/manifest.webmanifest
           test -f web/sw.js
+          test -f web/icon-192.png
+          test -f web/icon-512.png
+          node --check web/app.js
+          python -m json.tool web/manifest.webmanifest >/dev/null
 
       - name: Set up Java 17
         uses: actions/setup-java@v6
