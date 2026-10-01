@@ -121,7 +121,7 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
   <article class="card">
     <h3>RAM disponible</h3>
     <div class="value" id="ram">-</div>
-    <div class="note">Sin vaciados agresivos de memoria.</div>
+    <div class="note">Medición real. Smart Boost puede liberar procesos de usuario permitidos por Android.</div>
     <span class="st" id="ramS">-</span>
   </article>
 
@@ -184,36 +184,37 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
 </section>
 
 <section class="section">
-  <h2>Camara inteligente</h2>
+  <h2>Cámara inteligente</h2>
   <div class="panel">
     <div class="row">
-      <div><strong>Camera2</strong><small>Capacidades declaradas</small></div>
+      <div><strong>Camera2</strong><small>Capacidades declaradas del dispositivo</small></div>
       <div class="right" id="cam">-</div>
     </div>
-    <div class="modes">
-      <button class="mode active" data-m="AUTO">Auto</button>
-      <button class="mode" data-m="DIA">Día</button>
-      <button class="mode" data-m="NOCHE">Noche</button>
-      <button class="mode" data-m="VIDEO">Vídeo</button>
-      <button class="mode" id="reset">Restaurar</button>
+    <div class="row">
+      <div><strong>Camera Lab Pro</strong><small>Captura, diagnóstico de luz/detalle, mejora real, comparación antes/después y exportación.</small></div>
+      <a class="btn primary" href="./camera-lab-pro.html" style="text-decoration:none;text-align:center">Abrir laboratorio</a>
     </div>
   </div>
-  <div class="info">Estos perfiles todavia no modifican la Camara Samsung. Restaurar vuelve el perfil interno de OptiCore Lab a Auto.</div>
+  <div class="info">El procesamiento se realiza localmente sobre la imagen capturada. No altera el firmware ni los parámetros internos de la cámara Samsung.</div>
 </section>
 
 <section class="section">
   <h2>Optimización segura</h2>
   <div class="panel">
     <div class="row">
+      <div><strong>Smart Boost + batería</strong><small>RAM antes/después, liberación equilibrada o intensiva, actividad reciente y diagnóstico de batería.</small></div>
+      <a class="btn primary" href="./optimizer-pro.html" style="text-decoration:none;text-align:center">Abrir Optimización Pro</a>
+    </div>
+    <div class="row">
       <div><strong>RAM / CPU</strong><small id="ramAdvice">-</small></div>
-      <button class="btn" id="rbtn">Recomendacion</button>
+      <button class="btn" id="rbtn">Diagnóstico</button>
     </div>
     <div class="row">
       <div><strong>Cache</strong><small id="cacheAdvice">-</small></div>
       <button class="btn" id="cbtn">Preparar limpieza</button>
     </div>
     <div class="row">
-      <div><strong>DNS</strong><small>No se cambia automaticamente hasta validar estabilidad y reversion.</small></div>
+      <div><strong>DNS</strong><small>No se cambia automáticamente hasta validar estabilidad y reversión.</small></div>
       <button class="btn" id="dbtn">Criterio</button>
     </div>
   </div>
