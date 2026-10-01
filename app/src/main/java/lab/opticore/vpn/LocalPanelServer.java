@@ -321,7 +321,7 @@ public final class LocalPanelServer {
                         sendJson(
                                 socket,
                                 200,
-                                "{\"ok\":true,\"engine\":\"opticore-embedded\",\"version\":\"" + esc(appVersion()) + "\"}");
+                                "{\"ok\":true,\"engine\":\"opticore-embedded\",\"version\":\"" + appVersion() + "\"}");
                     } else {
                         sendJson(
                                 socket,
