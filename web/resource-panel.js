@@ -52,8 +52,9 @@
   }
 
   function findButton(){
-    return qsa("button").find(function(b){
-      return (b.textContent||"").toLowerCase().indexOf("recomend")!==-1;
+    return byId("rbtn") || qsa("button").find(function(b){
+      var t=(b.textContent||"").toLowerCase();
+      return t.indexOf("recomend")!==-1 || t.indexOf("diagn")!==-1;
     }) || null;
   }
 
@@ -229,7 +230,8 @@
     var b=e.target && e.target.closest ? e.target.closest("button") : null;
     if(!b)return;
 
-    if((b.textContent||"").toLowerCase().indexOf("recomend")!==-1){
+    var text=(b.textContent||"").toLowerCase();
+    if(b.id==="rbtn" || text.indexOf("recomend")!==-1 || text.indexOf("diagn")!==-1){
       e.preventDefault();
       e.stopPropagation();
       load();
