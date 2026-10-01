@@ -10,14 +10,56 @@ android {
         applicationId "lab.opticore.vpn"
         minSdk 28
         targetSdk 36
-        versionCode 7
-        versionName "0.1.6"
+        versionCode 8
+        versionName "0.1.7"
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
         coreLibraryDesugaringEnabled true
+    }
+
+    // La carpeta web/ es la fuente canónica de la interfaz para Web, PWA y APK.
+    sourceSets {
+        main {
+            assets.srcDirs = [file("$buildDir/generated/opticorePanelAssets")]
+        }
+    }
+}
+
+def opticoreWebDir = rootProject.file("web")
+def generatedPanelAssets = file("$buildDir/generated/opticorePanelAssets")
+
+tasks.register("generateOptiCorePanelAssets") {
+    inputs.dir(opticoreWebDir)
+    outputs.dir(generatedPanelAssets)
+
+    doLast {
+        delete generatedPanelAssets
+        generatedPanelAssets.mkdirs()
+
+        def zipFile = new File(generatedPanelAssets, "panel-bundle.zip")
+        ant.zip(destfile: zipFile, basedir: opticoreWebDir)
+
+        def encoded = zipFile.bytes.encodeBase64().toString()
+        def chunkSize = Math.max(1, (int) Math.ceil(encoded.length() / 6.0d))
+
+        (0..<6).each { i ->
+            def from = i * chunkSize
+            def to = Math.min(encoded.length(), from + chunkSize)
+            def text = from < encoded.length() ? encoded.substring(from, to) : ""
+            new File(
+                    generatedPanelAssets,
+                    String.format(Locale.US, "panel-bundle.b64.%02d", i)
+            ).setText(text, "UTF-8")
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name.startsWith("merge") && task.name.endsWith("Assets")) {
+        task.dependsOn("generateOptiCorePanelAssets")
     }
 }
 
