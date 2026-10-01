@@ -133,7 +133,6 @@ public final class LocalStatusServer {
             if (hasConfig) {
                 endpoint = endpointFromConfig(store.loadConfig());
             }
-
         } catch (Exception ignored) {}
 
         String error = EngineService.getLastError();
@@ -148,6 +147,18 @@ public final class LocalStatusServer {
                 + "\"endpoint\":\"" + esc(endpoint) + "\","
                 + "\"connected_since\":" + since + ","
                 + "\"connected_seconds\":" + seconds + ","
+                + "\"rx_bytes\":" + EngineService.getTelemetryRxBytes() + ","
+                + "\"tx_bytes\":" + EngineService.getTelemetryTxBytes() + ","
+                + "\"rx_bps\":" + EngineService.getTelemetryRxBps() + ","
+                + "\"tx_bps\":" + EngineService.getTelemetryTxBps() + ","
+                + "\"rx_ewma_bps\":" + EngineService.getTelemetryRxEwmaBps() + ","
+                + "\"tx_ewma_bps\":" + EngineService.getTelemetryTxEwmaBps() + ","
+                + "\"burst\":" + EngineService.isTelemetryBurst() + ","
+                + "\"burst_z\":" + EngineService.getTelemetryBurstZ() + ","
+                + "\"telemetry_sample_ms\":" + EngineService.getTelemetrySampleMs() + ","
+                + "\"telemetry_samples\":" + EngineService.getTelemetrySamples() + ","
+                + "\"telemetry_source\":\"wireguard_backend\","
+                + "\"telemetry_model\":\"delta+time_ewma+welford_zscore\","
                 + "\"last_error\":\"" + esc(error) + "\""
                 + "}";
     }
