@@ -2,7 +2,7 @@
   var deferredPrompt=null;
   var installed=false;
 
-  if(localPanel()){
+  if(false && localPanel()){
     try{
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations()
@@ -67,7 +67,7 @@
   }
 
   function create(){
-    if(installed || standalone() || localPanel()) return;
+    if(installed || standalone()) return;
     if(document.getElementById("ocInstallIsland")) return;
     style();
     var box=document.createElement("div");
@@ -104,7 +104,7 @@
     hide();
   });
 
-  if("serviceWorker" in navigator && !localPanel()){
+  if("serviceWorker" in navigator){
     window.addEventListener("load",function(){
       navigator.serviceWorker.register("/sw.js",{scope:"/"})
         .catch(function(e){console.log("OptiCore SW",e)});
@@ -112,7 +112,7 @@
   }
 
   document.addEventListener("DOMContentLoaded",function(){
-    if(!standalone() && !localPanel()){
+    if(!standalone()){
       setTimeout(function(){
         if(!document.getElementById("ocInstallIsland")) create();
       },2200);
