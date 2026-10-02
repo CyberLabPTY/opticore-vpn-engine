@@ -212,18 +212,84 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                     continue;
                 }
 
-                Rect card = service.findCardBounds(node);
+                boolean removed = false;
+                String method = "";
 
-                if (service.swipeCardUp(card)) {
-                    JSONObject item = new JSONObject();
-                    item.put("label", label);
-                    item.put("package", pkg);
+                if (service.dismissNode(node)) {
+                    sleepQuietly(500L);
+                    removed = !service.isLabelPresent(label);
+                    if (removed) {
+                        method = "accessibility_dismiss";
+                    }
+                }
+
+                if (!removed) {
+                    AccessibilityNodeInfo retryRoot =
+                            service.getRootInActiveWindow();
+                    AccessibilityNodeInfo retryNode =
+                            service.findNodeForLabel(
+                                    retryRoot,
+                                    label);
+
+                    if (retryNode != null) {
+                        Rect card =
+                                service.findCardBounds(
+                                        retryNode);
+
+                        if (service.swipeCardUp(
+                                card,
+                                false)) {
+
+                            sleepQuietly(700L);
+                            removed =
+                                    !service.isLabelPresent(
+                                            label);
+
+                            if (removed) {
+                                method = "swipe_up";
+                            }
+                        }
+                    }
+                }
+
+                if (!removed) {
+                    AccessibilityNodeInfo retryRoot =
+                            service.getRootInActiveWindow();
+                    AccessibilityNodeInfo retryNode =
+                            service.findNodeForLabel(
+                                    retryRoot,
+                                    label);
+
+                    if (retryNode != null) {
+                        Rect card =
+                                service.findCardBounds(
+                                        retryNode);
+
+                        if (service.swipeCardUp(
+                                card,
+                                true)) {
+
+                            sleepQuietly(850L);
+                            removed =
+                                    !service.isLabelPresent(
+                                            label);
+
+                            if (removed) {
+                                method = "swipe_up_strong";
+                            }
+                        }
+                    }
+                }
+
+                JSONObject item = new JSONObject();
+                item.put("label", label);
+                item.put("package", pkg);
+
+                if (removed) {
+                    item.put("method", method);
                     closed.put(item);
-                    sleepQuietly(550L);
                 } else {
-                    JSONObject item = new JSONObject();
-                    item.put("label", label);
-                    item.put("package", pkg);
+                    item.put("reason", "still_present_after_close_attempt");
                     missing.put(item);
                 }
             }
@@ -242,7 +308,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             out.put("protected", protectedApps);
             out.put(
                     "note",
-                    "A close is counted only when the accessibility swipe gesture was accepted by Android. The Recent-app UI can vary by manufacturer. OptiCore returns to the exact screen that launched the close action, so the result stays in the same panel tab.");
+                    "A close is counted only after OptiCore verifies that the selected Recent-app card is no longer present. It tries Android's accessibility dismiss action first, then normal and strong upward swipe fallbacks. The Recent-app UI can vary by manufacturer.");
 
         } catch (Throwable e) {
             putError(out, e);
@@ -522,25 +588,75 @@ public final class RecentsAccessibilityService extends AccessibilityService {
         return best;
     }
 
-    private boolean swipeCardUp(Rect card) {
+    private boolean isLabelPresent(String label) {
+        AccessibilityNodeInfo root =
+                getRootInActiveWindow();
+
+        return findNodeForLabel(
+                root,
+                label) != null;
+    }
+
+    private boolean dismissNode(
+            AccessibilityNodeInfo node) {
+
+        AccessibilityNodeInfo current = node;
+
+        for (int depth = 0;
+             current != null && depth < 8;
+             depth++) {
+
+            if ((current.getActions() &
+                    AccessibilityNodeInfo.ACTION_DISMISS) != 0) {
+
+                try {
+                    if (current.performAction(
+                            AccessibilityNodeInfo.ACTION_DISMISS)) {
+                        return true;
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+
+            current = current.getParent();
+        }
+
+        return false;
+    }
+
+    private boolean swipeCardUp(
+            Rect card,
+            boolean strong) {
+
         DisplayMetrics metrics = screenMetrics();
 
-        float startX =
+        float rawX =
                 card == null || card.isEmpty()
                         ? metrics.widthPixels / 2f
                         : card.centerX();
+
+        float startX =
+                Math.max(
+                        metrics.widthPixels * 0.08f,
+                        Math.min(
+                                metrics.widthPixels * 0.92f,
+                                rawX));
 
         float startY =
                 card == null || card.isEmpty()
                         ? metrics.heightPixels * 0.68f
                         : Math.min(
-                                metrics.heightPixels * 0.78f,
-                                card.top + card.height() * 0.66f);
+                                metrics.heightPixels * 0.80f,
+                                Math.max(
+                                        metrics.heightPixels * 0.42f,
+                                        card.top + card.height() * 0.62f));
 
         float endY =
-                Math.max(
-                        metrics.heightPixels * 0.08f,
-                        startY - metrics.heightPixels * 0.55f);
+                strong
+                        ? metrics.heightPixels * 0.02f
+                        : Math.max(
+                                metrics.heightPixels * 0.08f,
+                                startY - metrics.heightPixels * 0.58f);
 
         Path path = new Path();
         path.moveTo(startX, startY);
@@ -550,7 +666,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                 new GestureDescription.StrokeDescription(
                         path,
                         0L,
-                        360L);
+                        strong ? 220L : 340L);
 
         GestureDescription gesture =
                 new GestureDescription.Builder()
