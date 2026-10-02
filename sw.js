@@ -1,4 +1,4 @@
-const CACHE="opticore-pwa-v11-pages";
+const CACHE="opticore-pwa-v12-pages";
 const ROOT=new URL("./",self.location.href).href;
 const INDEX=new URL("./index.html",self.location.href).href;
 const STATIC=[
