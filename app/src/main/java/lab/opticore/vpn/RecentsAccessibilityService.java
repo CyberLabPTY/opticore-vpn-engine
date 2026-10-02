@@ -216,8 +216,10 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                 String method = "";
 
                 if (service.dismissNode(node)) {
-                    sleepQuietly(500L);
-                    removed = !service.isLabelPresent(label);
+                    removed = service.waitForLabelAbsent(
+                            label,
+                            900L,
+                            150L);
                     if (removed) {
                         method = "accessibility_dismiss";
                     }
@@ -240,10 +242,11 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                                 card,
                                 false)) {
 
-                            sleepQuietly(700L);
                             removed =
-                                    !service.isLabelPresent(
-                                            label);
+                                    service.waitForLabelAbsent(
+                                            label,
+                                            1200L,
+                                            180L);
 
                             if (removed) {
                                 method = "swipe_up";
@@ -269,10 +272,15 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                                 card,
                                 true)) {
 
-                            sleepQuietly(850L);
+                            // Samsung/Android Recents can keep a stale card in
+                            // the accessibility tree briefly after the gesture.
+                            // Poll the live tree instead of treating that
+                            // animation delay as a failed close.
                             removed =
-                                    !service.isLabelPresent(
-                                            label);
+                                    service.waitForLabelAbsent(
+                                            label,
+                                            2800L,
+                                            200L);
 
                             if (removed) {
                                 method = "swipe_up_strong";
@@ -308,7 +316,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             out.put("protected", protectedApps);
             out.put(
                     "note",
-                    "A close is counted only after OptiCore verifies that the selected Recent-app card is no longer present. It tries Android's accessibility dismiss action first, then normal and strong upward swipe fallbacks. The Recent-app UI can vary by manufacturer.");
+                    "A close is counted only after OptiCore verifies that the selected Recent-app card is no longer present. It tries Android's accessibility dismiss action first, then normal and strong upward swipe fallbacks, polling the live Recents tree long enough to avoid animation-delay false negatives. The Recent-app UI can vary by manufacturer.");
 
         } catch (Throwable e) {
             putError(out, e);
@@ -595,6 +603,28 @@ public final class RecentsAccessibilityService extends AccessibilityService {
         return findNodeForLabel(
                 root,
                 label) != null;
+    }
+
+    private boolean waitForLabelAbsent(
+            String label,
+            long timeoutMs,
+            long pollMs) {
+
+        long timeout = Math.max(0L, timeoutMs);
+        long interval = Math.max(80L, pollMs);
+        long deadline = System.currentTimeMillis() + timeout;
+
+        while (true) {
+            if (!isLabelPresent(label)) {
+                return true;
+            }
+
+            if (System.currentTimeMillis() >= deadline) {
+                return false;
+            }
+
+            sleepQuietly(interval);
+        }
     }
 
     private boolean dismissNode(
