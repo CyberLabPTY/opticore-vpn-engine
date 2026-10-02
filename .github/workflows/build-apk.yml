@@ -23,6 +23,7 @@ on:
       - opticore-smart-fluency-v035
       - opticore-final-v036
       - opticore-final-v037
+      - opticore-final-v038
 
 jobs:
   build:
