@@ -18,6 +18,7 @@ on:
       - opticore-panel-return-v029
       - opticore-same-tab-v030
       - opticore-inline-close-v031
+      - opticore-open-apps-fix-v032
 
 jobs:
   build:
