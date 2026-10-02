@@ -1,4 +1,4 @@
-const CACHE="opticore-pwa-v3";
+const CACHE="opticore-pwa-v4";
 const STATIC=[
   "/",
   "/index.html",
