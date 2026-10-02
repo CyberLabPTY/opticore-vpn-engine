@@ -10,6 +10,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Path;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class RecentsAccessibilityService extends AccessibilityService {
 
     private static volatile RecentsAccessibilityService instance;
+    private static final String PANEL_URI = "http://127.0.0.1:8766/optimizer-pro.html#open-apps";
 
     @Override
     protected void onServiceConnected() {
@@ -108,7 +110,9 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             AccessibilityNodeInfo root = service.getRootInActiveWindow();
             JSONArray apps = service.collectRecentCards(context, root);
 
-            service.performGlobalActionSync(GLOBAL_ACTION_BACK);
+            // Return explicitly to the OptiCore panel instead of leaving
+            // the user in Android Recents or a previous Settings screen.
+            service.returnToPanelSoon(220L);
 
             out.put("ok", true);
             out.put("apps", apps);
@@ -118,7 +122,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                     "Android Recents accessibility tree; only cards currently exposed by Android are returned.");
             out.put(
                     "note",
-                    "This is different from usage history. Android may expose only the currently loaded Recent-app cards.");
+                    "This is different from usage history. Android may expose only the currently loaded Recent-app cards. OptiCore returns to the local panel automatically after scanning.");
 
         } catch (Throwable e) {
             putError(out, e);
@@ -219,7 +223,9 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                 }
             }
 
-            service.performGlobalActionSync(GLOBAL_ACTION_BACK);
+            // Return explicitly to the OptiCore panel after the requested
+            // swipe-close gestures complete.
+            service.returnToPanelSoon(260L);
 
             out.put("ok", true);
             out.put("requested_count", limit);
@@ -231,7 +237,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             out.put("protected", protectedApps);
             out.put(
                     "note",
-                    "A close is counted only when the accessibility swipe gesture was accepted by Android. The Recent-app UI can vary by manufacturer.");
+                    "A close is counted only when the accessibility swipe gesture was accepted by Android. The Recent-app UI can vary by manufacturer. OptiCore returns to the local panel automatically after the close action.");
 
         } catch (Throwable e) {
             putError(out, e);
@@ -646,6 +652,47 @@ public final class RecentsAccessibilityService extends AccessibilityService {
         }
 
         return metrics;
+    }
+
+    private void returnToPanelSoon(long delayMs) {
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            Uri uri = Uri.parse(PANEL_URI);
+
+            String[] browsers = new String[] {
+                    "com.android.chrome",
+                    "com.sec.android.app.sbrowser"
+            };
+
+            for (String browserPackage : browsers) {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                    intent.setPackage(browserPackage);
+                    intent.addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK |
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+                    if (intent.resolveActivity(getPackageManager()) != null) {
+                        startActivity(intent);
+                        return;
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+
+            try {
+                Intent fallback = new Intent(Intent.ACTION_VIEW, uri);
+                fallback.addCategory(Intent.CATEGORY_BROWSABLE);
+                fallback.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK |
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(fallback);
+            } catch (Throwable ignored) {
+                performGlobalAction(GLOBAL_ACTION_BACK);
+            }
+        }, Math.max(0L, delayMs));
     }
 
     private static boolean isEnabled(Context context) {
