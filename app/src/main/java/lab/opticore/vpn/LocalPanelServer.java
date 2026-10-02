@@ -314,8 +314,11 @@ public final class LocalPanelServer {
                     !"/api/vpn-disconnect".equals(path) &&
                     !"/api/boost-run".equals(path) &&
                     !"/api/release-selected".equals(path) &&
+                    !"/api/scan-open-apps".equals(path) &&
+                    !"/api/close-recent-apps".equals(path) &&
                     !"/api/open-battery-settings".equals(path) &&
-                    !"/api/open-usage-settings".equals(path)) {
+                    !"/api/open-usage-settings".equals(path) &&
+                    !"/api/open-accessibility-settings".equals(path)) {
                 sendJson(
                         socket,
                         405,
@@ -422,6 +425,65 @@ public final class LocalPanelServer {
                                             appContext)
                                     .toString());
                     return;
+
+                case "/api/accessibility-status":
+                    sendJson(
+                            socket,
+                            200,
+                            RecentsAccessibilityService
+                                    .status(appContext)
+                                    .toString());
+                    return;
+
+                case "/api/open-accessibility-settings":
+                    openSettings(
+                            Settings.ACTION_ACCESSIBILITY_SETTINGS);
+
+                    sendJson(
+                            socket,
+                            200,
+                            "{\"ok\":true,\"action\":\"accessibility_settings\"}");
+                    return;
+
+                case "/api/scan-open-apps":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError("method_not_allowed"));
+                        return;
+                    }
+
+                    sendJson(
+                            socket,
+                            200,
+                            RecentsAccessibilityService
+                                    .scanOpenApps(appContext)
+                                    .toString());
+                    return;
+
+                case "/api/close-recent-apps":
+                    if (!"POST".equals(method)) {
+                        sendJson(
+                                socket,
+                                405,
+                                jsonError("method_not_allowed"));
+                        return;
+                    }
+
+                    Map<String, String> closeQuery =
+                            parseQuery(query);
+
+                    sendJson(
+                            socket,
+                            200,
+                            RecentsAccessibilityService
+                                    .closeSelected(
+                                            appContext,
+                                            closeQuery.get("targets"))
+                                    .toString());
+                    return;
+
 
                 case "/api/vpn-status":
                     sendJson(
