@@ -46,6 +46,14 @@ public final class MainActivity extends Activity {
         secureStore = new SecureStore(this);
         buildUi();
         refreshStatus();
+        handleWebBridgeIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleWebBridgeIntent(intent);
     }
 
     @Override
@@ -182,6 +190,142 @@ public final class MainActivity extends Activity {
         root.addView(note);
 
         setContentView(scroll);
+    }
+
+    private void handleWebBridgeIntent(Intent intent) {
+        try {
+            if (intent == null) {
+                return;
+            }
+
+            Uri data = intent.getData();
+
+            if (data == null ||
+                    !"opticorevpn".equalsIgnoreCase(
+                            data.getScheme()) ||
+                    !"control".equalsIgnoreCase(
+                            data.getHost())) {
+                return;
+            }
+
+            String action =
+                    data.getQueryParameter(
+                            "action");
+
+            if (!"pair".equalsIgnoreCase(
+                    action)) {
+                return;
+            }
+
+            String token =
+                    data.getQueryParameter(
+                            "token");
+
+            String origin =
+                    data.getQueryParameter(
+                            "origin");
+
+            boolean approved =
+                    WebBridgeAuth.approve(
+                            this,
+                            token,
+                            origin);
+
+            if (!approved) {
+                Toast.makeText(
+                        this,
+                        "No se pudo autorizar el enlace web",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            Toast.makeText(
+                    this,
+                    "Web OptiCore enlazada de forma segura",
+                    Toast.LENGTH_SHORT).show();
+
+            String callback =
+                    WebBridgeAuth.PUBLIC_SITE +
+                            "#opticore_bridge=" +
+                            token;
+
+            if (status != null) {
+                status.postDelayed(
+                        () -> openBridgeCallback(
+                                callback),
+                        550L);
+            } else {
+                openBridgeCallback(
+                        callback);
+            }
+
+        } catch (Throwable ignored) {
+            Toast.makeText(
+                    this,
+                    "No se pudo completar el enlace web",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void openBridgeCallback(
+            String callback) {
+
+        Uri target =
+                Uri.parse(
+                        callback);
+
+        String[] browsers =
+                new String[] {
+                        "com.android.chrome",
+                        "com.sec.android.app.sbrowser"
+                };
+
+        for (String browserPackage :
+                browsers) {
+
+            try {
+                Intent browserIntent =
+                        new Intent(
+                                Intent.ACTION_VIEW,
+                                target);
+
+                browserIntent.addCategory(
+                        Intent.CATEGORY_BROWSABLE);
+
+                browserIntent.setPackage(
+                        browserPackage);
+
+                if (browserIntent.resolveActivity(
+                        getPackageManager()) !=
+                        null) {
+
+                    startActivity(
+                            browserIntent);
+                    return;
+                }
+
+            } catch (Throwable ignored) {
+            }
+        }
+
+        try {
+            Intent fallback =
+                    new Intent(
+                            Intent.ACTION_VIEW,
+                            target);
+
+            fallback.addCategory(
+                    Intent.CATEGORY_BROWSABLE);
+
+            startActivity(
+                    fallback);
+
+        } catch (Throwable ignored) {
+            Toast.makeText(
+                    this,
+                    "Abre nuevamente la web de OptiCore",
+                    Toast.LENGTH_LONG).show();
+        }
     }
 
     private void authorizeVpn() {
