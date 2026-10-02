@@ -88,6 +88,15 @@
         "<div><span>Motor</span><strong id=\"oc-engine-state\">Verificando...</strong></div>"+
         "<div><span>Dispositivo</span><strong id=\"oc-device-model\">Detectando...</strong></div>"+
         "<div><span>Última medición</span><strong id=\"oc-last-update\">--</strong></div>"+
+      "</div>"+
+      "<div id=\"oc-open-android-wrap\" style=\"display:none;margin-top:14px\">"+
+        "<a id=\"oc-open-android\" href=\"opticorevpn://control\" "+
+          "style=\"display:block;text-decoration:none;text-align:center;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,#53dfcf,#5bc0eb);color:#041217;font-weight:900;letter-spacing:.02em\">"+
+          "Abrir OptiCore Android"+
+        "</a>"+
+        "<div style=\"margin-top:8px;text-align:center;color:#86a1b2;font-size:11px;line-height:1.45\">"+
+          "Abre la app instalada para ver VPN, RAM, caché, cierre de apps y telemetría reales."+
+        "</div>"+
       "</div>";
 
     if(host.firstChild){
@@ -116,7 +125,16 @@
       if(updated){
         updated.textContent="Sin datos Android locales";
       }
+      var openWrap=qs("#oc-open-android-wrap");
+      if(openWrap){
+        openWrap.style.display="block";
+      }
       return;
+    }
+
+    var openWrap=qs("#oc-open-android-wrap");
+    if(openWrap){
+      openWrap.style.display="none";
     }
 
     fetch("./data/device-status.json?t="+Date.now(),{
