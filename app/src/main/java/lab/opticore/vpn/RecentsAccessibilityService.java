@@ -35,10 +35,15 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class RecentsAccessibilityService extends AccessibilityService {
 
     private static volatile RecentsAccessibilityService instance;
+
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicInteger returnGeneration = new AtomicInteger(0);
+    private volatile Runnable pendingReturnRunnable;
 
     @Override
     protected void onServiceConnected() {
@@ -95,6 +100,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             }
 
             RecentsAccessibilityService service = instance;
+            service.cancelPendingReturn();
 
             if (!service.performGlobalActionSync(GLOBAL_ACTION_RECENTS)) {
                 out.put("ok", false);
@@ -162,6 +168,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             }
 
             RecentsAccessibilityService service = instance;
+            service.cancelPendingReturn();
 
             if (!service.performGlobalActionSync(GLOBAL_ACTION_RECENTS)) {
                 out.put("ok", false);
@@ -646,8 +653,27 @@ public final class RecentsAccessibilityService extends AccessibilityService {
         return metrics;
     }
 
+    private void cancelPendingReturn() {
+        returnGeneration.incrementAndGet();
+
+        Runnable pending = pendingReturnRunnable;
+        if (pending != null) {
+            mainHandler.removeCallbacks(pending);
+            pendingReturnRunnable = null;
+        }
+    }
+
     private void returnToCallerSoon(long delayMs) {
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        cancelPendingReturn();
+        final int generation = returnGeneration.get();
+
+        Runnable action = () -> {
+            if (returnGeneration.get() != generation) {
+                return;
+            }
+
+            pendingReturnRunnable = null;
+
             try {
                 // Return to the exact activity/tab that invoked the local API.
                 // Do not launch a new browser intent because Samsung/Chrome may
@@ -655,7 +681,10 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                 performGlobalAction(GLOBAL_ACTION_BACK);
             } catch (Throwable ignored) {
             }
-        }, Math.max(0L, delayMs));
+        };
+
+        pendingReturnRunnable = action;
+        mainHandler.postDelayed(action, Math.max(0L, delayMs));
     }
 
     private static boolean isEnabled(Context context) {
