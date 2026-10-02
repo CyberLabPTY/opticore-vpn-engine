@@ -288,18 +288,82 @@ button:disabled{opacity:.45}
 
   async function releaseBackgroundApps(){
     if(!requireEngine($("usageResult")))return;
-    const d=await scan();
-    if(!d)return;
-    const count=Number(d.candidate_count)||0;
-    if(count<1){
-      $("usageResult").innerHTML="<strong>No hay candidatas para liberar.</strong><br>Android no reporta aplicaciones de usuario secundarias disponibles para esta acción.";
+
+    const alreadySelected=selectedPackages();
+    if(alreadySelected.length){
+      await closeSelectedApps();
       return;
     }
-    const ok=window.confirm("OptiCore detectó "+count+" aplicación(es) candidatas en segundo plano. Se ejecutará la liberación manual protegida. ¿Continuar?");
-    if(!ok)return;
-    $("usageResult").innerHTML="<strong>Procesando...</strong><br>OptiCore está ejecutando la liberación manual con las protecciones del sistema.";
-    await run("aggressive");
-    $("usageResult").innerHTML="<strong>Proceso completado.</strong><br>Revisa el resultado medido en Smart Boost. Android conserva el control final sobre sus procesos.";
+
+    $("releaseBackgroundBtn").disabled=true;
+    $("usageResult").innerHTML="<strong>Analizando actividad reciente...</strong><br>OptiCore buscará aplicaciones de usuario que no estén en primer plano para preparar una liberación segura.";
+
+    try{
+      const d=await json("./api/recent-usage?t="+Date.now());
+
+      if(!d.usage_access){
+        $("usageResult").innerHTML="<strong>Acceso de uso pendiente.</strong><br>Autorízalo para identificar aplicaciones recientes antes de liberar procesos.";
+        return;
+      }
+
+      const now=Date.now();
+      const candidates=(d.apps||[])
+        .filter(x=>{
+          const last=Number(x.last_used_ms)||0;
+          const age=now-last;
+          return last>0 && age>30000 && age<(6*60*60*1000);
+        })
+        .slice(0,8);
+
+      if(!candidates.length){
+        $("usageResult").innerHTML="<strong>No hay candidatas seguras en este momento.</strong><br>Usa “Ver actividad reciente” y selecciona manualmente las aplicaciones que deseas liberar.";
+        await usage().catch(()=>{});
+        return;
+      }
+
+      const names=candidates.map(x=>x.label||x.package).join(", ");
+      const ok=window.confirm(
+        "OptiCore encontró "+candidates.length+
+        " aplicación(es) recientes para solicitar liberación en segundo plano:\n\n"+
+        names+
+        "\n\nAndroid conserva el control final y las tarjetas de Recientes pueden permanecer visibles. ¿Continuar?"
+      );
+      if(!ok)return;
+
+      const q=new URLSearchParams({
+        packages:candidates.map(x=>x.package).filter(Boolean).join(",")
+      });
+      q.set("t",String(Date.now()));
+
+      $("usageResult").innerHTML="<strong>Procesando...</strong><br>OptiCore está solicitando a Android liberar los procesos seleccionados por el análisis de actividad reciente.";
+
+      const result=await json("./api/release-selected?"+q.toString(),{method:"POST"});
+
+      if(!result.ok){
+        $("usageResult").innerHTML="<strong>No se pudo completar.</strong><br>"+escapeHtml(result.reason||"Acción bloqueada por Android.");
+        return;
+      }
+
+      const delta=Number(result.measured_delta_mb)||0;
+      $("usageResult").innerHTML=
+        "<strong>Liberación solicitada y medida.</strong><br>"+
+        "Aplicaciones analizadas: "+candidates.length+" · "+
+        "Solicitudes enviadas: "+(result.attempted_count||0)+" · "+
+        "Omitidas/protegidas: "+(result.skipped_count||0)+".<br>"+
+        "RAM antes: "+n(result.ram_before_mb)+" MB · "+
+        "RAM después: "+n(result.ram_after_mb)+" MB · "+
+        "Cambio medido: "+(delta>=0?"+":"")+n(delta)+" MB.<br>"+
+        "Las tarjetas de Aplicaciones recientes pueden seguir visibles aunque Android haya liberado procesos. Esta función no equivale a “Forzar detención”.";
+
+      await scan().catch(()=>{});
+      await usage().catch(()=>{});
+
+    }catch(e){
+      $("usageResult").innerHTML="<strong>Error durante la liberación.</strong><br>"+escapeHtml(String(e));
+    }finally{
+      $("releaseBackgroundBtn").disabled=false;
+      updateSelectionUi();
+    }
   }
 
   function formatAge(ms){const d=Math.max(0,Date.now()-Number(ms||0));const m=Math.round(d/60000);return m<1?"ahora":m<60?m+" min":Math.round(m/60)+" h"}
