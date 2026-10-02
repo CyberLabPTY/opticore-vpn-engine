@@ -14,6 +14,7 @@ on:
       - opticore-process-fix-v025
       - opticore-ui-restore-v026
       - opticore-panel-open-fix-v027
+      - opticore-open-apps-v028
 
 jobs:
   build:
