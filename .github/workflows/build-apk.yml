@@ -27,6 +27,7 @@ on:
       - opticore-final-v039
       - opticore-final-v040
       - opticore-final-v041-bridge
+      - opticore-final-v042-dns
 
 jobs:
   build:
