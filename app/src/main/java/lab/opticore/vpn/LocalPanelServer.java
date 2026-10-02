@@ -224,7 +224,56 @@ public final class LocalPanelServer {
                 return;
             }
 
+            String[] initialParts =
+                    requestLine.split(" ");
+
+            String initialMethod =
+                    initialParts.length > 0
+                            ? initialParts[0]
+                            : "";
+
+            String initialTarget =
+                    initialParts.length > 1
+                            ? initialParts[1]
+                            : "";
+
+            String initialPath =
+                    initialTarget;
+
+            String initialQuery = "";
+
+            int initialQ =
+                    initialTarget.indexOf('?');
+
+            if (initialQ >= 0) {
+                initialPath =
+                        initialTarget.substring(
+                                0,
+                                initialQ);
+
+                initialQuery =
+                        initialQ + 1 <
+                                initialTarget.length()
+                                ? initialTarget.substring(
+                                        initialQ + 1)
+                                : "";
+            }
+
+            try {
+                initialPath =
+                        URLDecoder.decode(
+                                initialPath,
+                                "UTF-8");
+            } catch (Throwable ignored) {
+            }
+
+            boolean bridgeRequest =
+                    "/api/bridge-status"
+                            .equals(
+                                    initialPath);
+
             String origin = "";
+            String bridgeToken = "";
             String line;
 
             while ((line = reader.readLine()) != null) {
@@ -238,7 +287,91 @@ public final class LocalPanelServer {
                         7)) {
                     origin =
                             line.substring(7).trim();
+
+                } else if (line.regionMatches(
+                        true,
+                        0,
+                        "X-OptiCore-Bridge:",
+                        0,
+                        18)) {
+
+                    bridgeToken =
+                            line.substring(18)
+                                    .trim();
                 }
+            }
+
+            if (bridgeRequest) {
+
+                if (!WebBridgeAuth
+                        .PUBLIC_ORIGIN
+                        .equals(origin)) {
+
+                    sendBridgeJson(
+                            socket,
+                            403,
+                            jsonError(
+                                    "origin_not_allowed"));
+
+                    return;
+                }
+
+                if ("OPTIONS".equals(
+                        initialMethod)) {
+
+                    sendBridge(
+                            socket,
+                            204,
+                            "text/plain; charset=utf-8",
+                            new byte[0]);
+
+                    return;
+                }
+
+                if (!"GET".equals(
+                        initialMethod)) {
+
+                    sendBridgeJson(
+                            socket,
+                            405,
+                            jsonError(
+                                    "method_not_allowed"));
+
+                    return;
+                }
+
+                if (!WebBridgeAuth.isValid(
+                        appContext,
+                        bridgeToken,
+                        origin)) {
+
+                    sendBridgeJson(
+                            socket,
+                            403,
+                            jsonError(
+                                    "bridge_not_paired"));
+
+                    return;
+                }
+
+                Map<String, String>
+                        bridgeQuery =
+                        parseQuery(
+                                initialQuery);
+
+                boolean detailed =
+                        "1".equals(
+                                bridgeQuery
+                                        .get(
+                                                "detail"));
+
+                sendBridgeJson(
+                        socket,
+                        200,
+                        buildBridgeStatusJson(
+                                detailed));
+
+                return;
             }
 
             if (!origin.isEmpty() &&
@@ -687,6 +820,201 @@ public final class LocalPanelServer {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             appContext.startActivity(intent);
         } catch (Throwable ignored) {
+        }
+    }
+
+    private static String buildBridgeStatusJson(
+            boolean detailed) {
+
+        try {
+            JSONObject out;
+
+            if (detailed) {
+                out =
+                        new JSONObject(
+                                buildDeviceStatusJson());
+
+            } else {
+                MemorySnapshot memory =
+                        readMemory();
+
+                out =
+                        new JSONObject();
+
+                out.put(
+                        "engine_version",
+                        appVersion() +
+                                "-bridge");
+
+                out.put(
+                        "updated_at",
+                        nowText());
+
+                out.put(
+                        "model",
+                        Build.MODEL == null
+                                ? "Android"
+                                : Build.MODEL);
+
+                out.put(
+                        "android",
+                        Build.VERSION.RELEASE == null
+                                ? ""
+                                : Build.VERSION.RELEASE);
+
+                out.put(
+                        "ram_available_percent",
+                        round1(
+                                memory
+                                        .ramAvailablePercent));
+
+                out.put(
+                        "ram_state",
+                        ramState(
+                                memory
+                                        .ramAvailablePercent));
+
+                out.put(
+                        "swap_used_percent",
+                        round1(
+                                memory
+                                        .swapUsedPercent));
+
+                out.put(
+                        "swap_state",
+                        swapState(
+                                memory
+                                        .swapUsedPercent));
+
+                out.put(
+                        "cpu_efficiency_current_mhz",
+                        readCpuMhz(
+                                0,
+                                false));
+
+                out.put(
+                        "cpu_performance_current_mhz",
+                        readCpuMhz(
+                                4,
+                                false));
+
+                out.put(
+                        "cpu_performance_max_mhz",
+                        readCpuMhz(
+                                4,
+                                true));
+
+                out.put(
+                        "gpu_current_mhz",
+                        readHzMhz(
+                                "/sys/class/kgsl/kgsl-3d0/gpuclk"));
+
+                out.put(
+                        "gpu_max_mhz",
+                        readHzMhz(
+                                "/sys/class/kgsl/kgsl-3d0/max_gpuclk"));
+
+                double battery =
+                        batteryTempC();
+
+                if (battery >= 0.0) {
+                    out.put(
+                            "battery_celsius",
+                            round1(
+                                    battery));
+                } else {
+                    out.put(
+                            "battery_celsius",
+                            JSONObject.NULL);
+                }
+
+                out.put(
+                        "network_interface",
+                        activeInterfaceName());
+            }
+
+            JSONObject vpn =
+                    new JSONObject(
+                            LocalStatusServer
+                                    .buildStatusJson());
+
+            out.put(
+                    "ok",
+                    true);
+
+            out.put(
+                    "bridge",
+                    true);
+
+            out.put(
+                    "bridge_read_only",
+                    true);
+
+            out.put(
+                    "bridge_expires_at",
+                    WebBridgeAuth
+                            .expiresAt(
+                                    appContext));
+
+            out.put(
+                    "vpn_connected",
+                    vpn.optBoolean(
+                            "connected",
+                            false));
+
+            out.put(
+                    "vpn_connected_seconds",
+                    vpn.optLong(
+                            "connected_seconds",
+                            0L));
+
+            out.put(
+                    "vpn_rx_bytes",
+                    vpn.optLong(
+                            "rx_bytes",
+                            0L));
+
+            out.put(
+                    "vpn_tx_bytes",
+                    vpn.optLong(
+                            "tx_bytes",
+                            0L));
+
+            out.put(
+                    "vpn_rx_bps",
+                    vpn.optDouble(
+                            "rx_bps",
+                            0.0));
+
+            out.put(
+                    "vpn_tx_bps",
+                    vpn.optDouble(
+                            "tx_bps",
+                            0.0));
+
+            out.put(
+                    "vpn_rx_ewma_bps",
+                    vpn.optDouble(
+                            "rx_ewma_bps",
+                            0.0));
+
+            out.put(
+                    "vpn_tx_ewma_bps",
+                    vpn.optDouble(
+                            "tx_ewma_bps",
+                            0.0));
+
+            out.put(
+                    "vpn_burst",
+                    vpn.optBoolean(
+                            "burst",
+                            false));
+
+            return out.toString();
+
+        } catch (Throwable e) {
+            return jsonError(
+                    "bridge_status_failed");
         }
     }
 
@@ -2638,6 +2966,105 @@ public final class LocalPanelServer {
         return v == null
                 ? ""
                 : v;
+    }
+
+    private static void sendBridgeJson(
+            Socket socket,
+            int status,
+            String json)
+            throws Exception {
+
+        sendBridge(
+                socket,
+                status,
+                "application/json; charset=utf-8",
+                json.getBytes(
+                        StandardCharsets.UTF_8));
+    }
+
+    private static void sendBridge(
+            Socket socket,
+            int status,
+            String type,
+            byte[] body)
+            throws Exception {
+
+        String statusText;
+
+        switch (status) {
+            case 200:
+                statusText = "OK";
+                break;
+
+            case 204:
+                statusText = "No Content";
+                break;
+
+            case 400:
+                statusText = "Bad Request";
+                break;
+
+            case 403:
+                statusText = "Forbidden";
+                break;
+
+            case 404:
+                statusText = "Not Found";
+                break;
+
+            case 405:
+                statusText = "Method Not Allowed";
+                break;
+
+            default:
+                statusText = "Error";
+                break;
+        }
+
+        byte[] bytes =
+                body == null
+                        ? new byte[0]
+                        : body;
+
+        String headers =
+                "HTTP/1.1 " +
+                        status +
+                        " " +
+                        statusText +
+                        "\r\n" +
+                        "Content-Type: " +
+                        type +
+                        "\r\n" +
+                        "Content-Length: " +
+                        bytes.length +
+                        "\r\n" +
+                        "Access-Control-Allow-Origin: " +
+                        WebBridgeAuth.PUBLIC_ORIGIN +
+                        "\r\n" +
+                        "Access-Control-Allow-Methods: GET, OPTIONS\r\n" +
+                        "Access-Control-Allow-Headers: X-OptiCore-Bridge, Content-Type\r\n" +
+                        "Access-Control-Allow-Private-Network: true\r\n" +
+                        "Access-Control-Max-Age: 600\r\n" +
+                        "Vary: Origin, Access-Control-Request-Private-Network\r\n" +
+                        "Cross-Origin-Resource-Policy: cross-origin\r\n" +
+                        "X-Content-Type-Options: nosniff\r\n" +
+                        "Cache-Control: no-store\r\n" +
+                        "Connection: close\r\n\r\n";
+
+        OutputStream out =
+                socket.getOutputStream();
+
+        out.write(
+                headers.getBytes(
+                        StandardCharsets.UTF_8));
+
+        if (status != 204 &&
+                bytes.length > 0) {
+
+            out.write(bytes);
+        }
+
+        out.flush();
     }
 
     private static void sendJson(
