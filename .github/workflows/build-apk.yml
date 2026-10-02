@@ -28,6 +28,7 @@ on:
       - opticore-final-v040
       - opticore-final-v041-bridge
       - opticore-final-v042-dns
+      - opticore-final-v043-persistent-pairing
 
 jobs:
   build:
