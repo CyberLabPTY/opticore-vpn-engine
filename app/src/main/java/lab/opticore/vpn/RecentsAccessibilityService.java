@@ -221,7 +221,10 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                             900L,
                             150L);
                     if (removed) {
-                        method = "accessibility_dismiss";
+                        removed = service.confirmLabelAbsentAfterRecentsRefresh(label);
+                        if (removed) {
+                            method = "accessibility_dismiss";
+                        }
                     }
                 }
 
@@ -249,7 +252,10 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                                             180L);
 
                             if (removed) {
-                                method = "swipe_up";
+                                removed = service.confirmLabelAbsentAfterRecentsRefresh(label);
+                                if (removed) {
+                                    method = "swipe_up";
+                                }
                             }
                         }
                     }
@@ -283,7 +289,49 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                                             200L);
 
                             if (removed) {
-                                method = "swipe_up_strong";
+                                removed = service.confirmLabelAbsentAfterRecentsRefresh(label);
+                                if (removed) {
+                                    method = "swipe_up_strong";
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // One final targeted retry is allowed only if the card
+                // reappeared after reopening Recents. This avoids treating
+                // a temporary accessibility-tree disappearance as success.
+                if (!removed) {
+                    AccessibilityNodeInfo finalRoot =
+                            service.getRootInActiveWindow();
+                    AccessibilityNodeInfo finalNode =
+                            service.findNodeForLabel(
+                                    finalRoot,
+                                    label);
+
+                    if (finalNode != null) {
+                        Rect finalCard =
+                                service.findCardBounds(
+                                        finalNode);
+
+                        if (service.swipeCardUp(
+                                finalCard,
+                                true)) {
+
+                            removed =
+                                    service.waitForLabelAbsent(
+                                            label,
+                                            2800L,
+                                            200L);
+
+                            if (removed) {
+                                removed =
+                                        service.confirmLabelAbsentAfterRecentsRefresh(
+                                                label);
+
+                                if (removed) {
+                                    method = "swipe_up_strong_retry";
+                                }
                             }
                         }
                     }
@@ -295,6 +343,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
                 if (removed) {
                     item.put("method", method);
+                    item.put("verified", "recents_reopen");
                     closed.put(item);
                 } else {
                     item.put("reason", "still_present_after_close_attempt");
@@ -316,7 +365,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             out.put("protected", protectedApps);
             out.put(
                     "note",
-                    "A close is counted only after OptiCore verifies that the selected Recent-app card is no longer present. It tries Android's accessibility dismiss action first, then normal and strong upward swipe fallbacks, polling the live Recents tree long enough to avoid animation-delay false negatives. The Recent-app UI can vary by manufacturer.");
+                    "A close is counted only after OptiCore reopens Android Recents and confirms that the selected card is still absent. It tries accessibility dismiss, normal and strong upward swipes, with one final targeted retry when a card reappears after refresh. The Recent-app UI can vary by manufacturer.");
 
         } catch (Throwable e) {
             putError(out, e);
@@ -625,6 +674,29 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
             sleepQuietly(interval);
         }
+    }
+
+    private boolean confirmLabelAbsentAfterRecentsRefresh(
+            String label) {
+
+        // A Samsung Recents card can disappear from the accessibility tree
+        // during animation without actually being removed. Re-open Recents
+        // from the caller and verify the card is still absent.
+        sleepQuietly(450L);
+
+        if (!performGlobalActionSync(GLOBAL_ACTION_BACK)) {
+            return false;
+        }
+
+        sleepQuietly(320L);
+
+        if (!performGlobalActionSync(GLOBAL_ACTION_RECENTS)) {
+            return false;
+        }
+
+        sleepQuietly(850L);
+
+        return !isLabelPresent(label);
     }
 
     private boolean dismissNode(
