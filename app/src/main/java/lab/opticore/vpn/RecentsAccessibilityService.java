@@ -18,6 +18,7 @@ import android.util.DisplayMetrics;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -103,10 +104,19 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                 return out;
             }
 
-            sleepQuietly(800L);
+            sleepQuietly(900L);
 
-            AccessibilityNodeInfo root = service.getRootInActiveWindow();
-            JSONArray apps = service.collectRecentCards(context, root);
+            JSONArray apps =
+                    service.collectRecentCardsFromVisibleWindows(context);
+
+            // Samsung/One UI and some OEM launchers populate the Recents
+            // accessibility tree a little later than the window switch.
+            // One short retry avoids reporting an empty list too early.
+            if (apps.length() == 0) {
+                sleepQuietly(450L);
+                apps =
+                        service.collectRecentCardsFromVisibleWindows(context);
+            }
 
             // Return explicitly to the OptiCore panel instead of leaving
             // the user in Android Recents or a previous Settings screen.
@@ -194,8 +204,8 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                     continue;
                 }
 
-                AccessibilityNodeInfo root = service.getRootInActiveWindow();
-                AccessibilityNodeInfo node = service.findNodeForLabel(root, label);
+                AccessibilityNodeInfo node =
+                        service.findNodeForLabelAcrossVisibleWindows(label);
 
                 if (node == null) {
                     JSONObject item = new JSONObject();
@@ -242,6 +252,85 @@ public final class RecentsAccessibilityService extends AccessibilityService {
         }
 
         return out;
+    }
+
+    private JSONArray collectRecentCardsFromVisibleWindows(
+            Context context) throws Exception {
+
+        LinkedHashMap<String, JSONObject> merged =
+                new LinkedHashMap<>();
+
+        mergeRecentApps(
+                merged,
+                collectRecentCards(
+                        context,
+                        getRootInActiveWindow()));
+
+        try {
+            List<AccessibilityWindowInfo> windows = getWindows();
+
+            if (windows != null) {
+                for (AccessibilityWindowInfo window : windows) {
+                    if (window == null) continue;
+
+                    AccessibilityNodeInfo root = null;
+
+                    try {
+                        root = window.getRoot();
+                    } catch (Throwable ignored) {
+                    }
+
+                    if (root == null) continue;
+
+                    mergeRecentApps(
+                            merged,
+                            collectRecentCards(
+                                    context,
+                                    root));
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        JSONArray out = new JSONArray();
+
+        for (JSONObject item : merged.values()) {
+            out.put(item);
+        }
+
+        return out;
+    }
+
+    private static void mergeRecentApps(
+            LinkedHashMap<String, JSONObject> merged,
+            JSONArray apps) throws Exception {
+
+        if (apps == null) return;
+
+        for (int i = 0; i < apps.length(); i++) {
+            JSONObject item = apps.optJSONObject(i);
+            if (item == null) continue;
+
+            String pkg =
+                    item.optString("package", "").trim();
+
+            String label =
+                    item.optString("label", "").trim();
+
+            String key =
+                    !pkg.isEmpty()
+                            ? pkg
+                            : label.toLowerCase(Locale.ROOT);
+
+            if (key.isEmpty() ||
+                    merged.containsKey(key)) {
+                continue;
+            }
+
+            merged.put(
+                    key,
+                    item);
+        }
     }
 
     private JSONArray collectRecentCards(
@@ -418,6 +507,46 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
                 return ref;
             }
+        }
+
+        return null;
+    }
+
+    private AccessibilityNodeInfo findNodeForLabelAcrossVisibleWindows(
+            String targetLabel) {
+
+        AccessibilityNodeInfo node =
+                findNodeForLabel(
+                        getRootInActiveWindow(),
+                        targetLabel);
+
+        if (node != null) return node;
+
+        try {
+            List<AccessibilityWindowInfo> windows = getWindows();
+
+            if (windows != null) {
+                for (AccessibilityWindowInfo window : windows) {
+                    if (window == null) continue;
+
+                    AccessibilityNodeInfo root = null;
+
+                    try {
+                        root = window.getRoot();
+                    } catch (Throwable ignored) {
+                    }
+
+                    if (root == null) continue;
+
+                    node =
+                            findNodeForLabel(
+                                    root,
+                                    targetLabel);
+
+                    if (node != null) return node;
+                }
+            }
+        } catch (Throwable ignored) {
         }
 
         return null;
