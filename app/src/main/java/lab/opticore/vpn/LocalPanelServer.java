@@ -943,6 +943,10 @@ public final class LocalPanelServer {
                     true);
 
             out.put(
+                    "version",
+                    appVersion());
+
+            out.put(
                     "bridge",
                     true);
 
