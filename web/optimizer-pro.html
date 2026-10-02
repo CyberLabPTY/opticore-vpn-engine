@@ -78,15 +78,16 @@ button:disabled{opacity:.45}
   </section>
 
   <section class="section">
-    <h2>Aplicaciones activas</h2>
+    <h2>Aplicaciones abiertas</h2>
     <div class="actions">
-      <button id="usageBtn">Detectar apps activas</button>
+      <button id="usageBtn">Detectar apps abiertas</button>
+      <button id="usageSettingsBtn">Autorizar accesibilidad</button>
       <button id="releaseBackgroundBtn" class="danger">Cerrar + liberar caché de todas</button>
       <button id="selectAllBtn">Seleccionar todas</button>
       <button id="closeSelectedBtn" class="danger" disabled>Cerrar + liberar caché</button>
     </div>
-    <div id="usageResult" class="result">OptiCore revisa desde el motor Android los procesos de usuario que el sistema expone. La lista y las acciones permanecen dentro de esta misma página; no se abre Aplicaciones recientes ni Accesibilidad.</div>
-    <div class="note">Al cerrar desde aquí, OptiCore solicita a Android liberar el proceso en segundo plano y, con la misma acción, limpia únicamente la caché externa que Android permita. No borra datos personales ni configuración de la aplicación. OptiCore, System UI, launcher, teclado y este panel permanecen protegidos.</div>
+    <div id="usageResult" class="result">OptiCore detecta las tarjetas que Android muestra en Aplicaciones recientes. Durante el escaneo abre Recientes brevemente y vuelve automáticamente a esta misma pestaña.</div>
+    <div class="note">Para detectar y cerrar tarjetas de Recientes, Android exige autorizar el servicio de accesibilidad de OptiCore una sola vez. Al cerrar, OptiCore también solicita liberar el proceso en segundo plano y limpia únicamente la caché externa que Android permita. No borra datos personales ni configuración. OptiCore, System UI, launcher, teclado y el navegador que mantiene abierto este panel permanecen protegidos.</div>
     <div id="usageList" class="list"></div>
   </section>
 </main>
@@ -181,18 +182,22 @@ button:disabled{opacity:.45}
 
   async function usage(){
     if(!requireEngine($("usageResult")))return null;
-    $("usageResult").innerHTML="<strong>Detectando aplicaciones activas...</strong><br>La comprobación se realiza dentro de OptiCore sin abrir Recientes ni Ajustes.";
-    const d=await json("./api/boost-scan?t="+Date.now());
+    $("usageResult").innerHTML="<strong>Detectando aplicaciones abiertas...</strong><br>OptiCore abrirá Recientes brevemente, leerá las tarjetas expuestas por Android y volverá automáticamente a esta misma pestaña.";
+    const d=await json("./api/scan-open-apps?t="+Date.now(),{method:"POST"});
     const list=$("usageList");list.innerHTML="";
     if(!d.ok){
-      $("usageResult").innerHTML="<strong>No se pudo detectar.</strong><br>"+escapeHtml(d.reason||d.message||"Android no expuso procesos de usuario.");
+      if(d.reason==="accessibility_required"){
+        $("usageResult").innerHTML="<strong>Accesibilidad pendiente.</strong><br>Toca “Autorizar accesibilidad”, activa el servicio de OptiCore y vuelve a intentar.";
+      }else{
+        $("usageResult").innerHTML="<strong>No se pudo detectar la lista de Recientes.</strong><br>"+escapeHtml(d.reason||d.message||"Android no expuso las tarjetas.");
+      }
       updateSelectionUi();
       return d;
     }
-    const apps=Array.isArray(d.candidates)?d.candidates:[];
+    const apps=Array.isArray(d.apps)?d.apps:[];
     $("usageResult").innerHTML=apps.length
-      ? "<strong>Aplicaciones activas detectadas: "+apps.length+".</strong><br>Estas son aplicaciones de usuario que Android expone al motor como procesos en segundo plano o en memoria."
-      : "<strong>No se detectaron aplicaciones cerrables.</strong><br>Android no expuso procesos de usuario que OptiCore pueda liberar desde esta página.";
+      ? "<strong>Apps abiertas detectadas: "+apps.length+".</strong><br>La lista corresponde a tarjetas de Aplicaciones recientes que Android expuso a OptiCore."
+      : "<strong>No se detectaron tarjetas abiertas.</strong><br>Android no expuso tarjetas de usuario cerrables en Aplicaciones recientes.";
     apps.forEach(x=>{
       const row=document.createElement("div");row.className="app";
       const label=document.createElement("label");label.className="app-select";
@@ -203,9 +208,9 @@ button:disabled{opacity:.45}
       check.dataset.label=String(x.label||x.package||"Aplicación");
       check.addEventListener("change",updateSelectionUi);
       const text=document.createElement("span");
-      text.innerHTML="<b>"+escapeHtml(x.label||x.package||"Aplicación")+"</b><br><small>"+escapeHtml(x.package||"Proceso de usuario")+"</small>";
+      text.innerHTML="<b>"+escapeHtml(x.label||x.package||"Aplicación")+"</b><br><small>"+escapeHtml(x.package||"Tarjeta de Recientes")+"</small>";
       const state=document.createElement("small");
-      state.textContent="ACTIVA";
+      state.textContent="ABIERTA";
       label.appendChild(check);
       label.appendChild(text);
       row.appendChild(label);
@@ -213,7 +218,7 @@ button:disabled{opacity:.45}
       list.appendChild(row);
     });
     updateSelectionUi();
-    return {ok:true,apps:apps};
+    return d;
   }
 
   function selectedTargets(){
@@ -248,68 +253,81 @@ button:disabled{opacity:.45}
   async function closeTargets(targets,confirmFirst){
     if(!requireEngine($("usageResult")))return;
     if(!targets.length){
-      $("usageResult").innerHTML="<strong>No hay aplicaciones seleccionadas.</strong><br>Marca una o más aplicaciones activas y vuelve a intentarlo.";
+      $("usageResult").innerHTML="<strong>No hay aplicaciones seleccionadas.</strong><br>Marca una o más tarjetas abiertas y vuelve a intentarlo.";
       return;
     }
 
     if(confirmFirst){
       const names=targets.map(x=>x.label).join(", ");
       const ok=window.confirm(
-        "OptiCore procesará "+targets.length+" aplicación(es) desde esta misma página:\n\n"+
+        "OptiCore cerrará "+targets.length+" tarjeta(s) de Aplicaciones recientes:\n\n"+
         names+
-        "\n\nSolicitará liberar sus procesos en segundo plano y limpiará la caché externa accesible, sin borrar datos personales. ¿Continuar?"
+        "\n\nDespués solicitará liberar sus procesos en segundo plano y limpiará la caché externa accesible, sin borrar datos personales. ¿Continuar?"
       );
       if(!ok)return;
     }
 
     $("closeSelectedBtn").disabled=true;
     $("releaseBackgroundBtn").disabled=true;
-    $("usageResult").innerHTML="<strong>Cerrando y liberando caché...</strong><br>OptiCore permanecerá en esta página mientras Android procesa las solicitudes.";
+    $("usageResult").innerHTML="<strong>Cerrando y liberando caché...</strong><br>Android mostrará Recientes brevemente mientras OptiCore realiza los gestos y después volverá a esta misma pestaña.";
 
     try{
-      const packages=[...new Set(targets.map(x=>x.package).filter(Boolean))];
-      if(!packages.length)throw new Error("No hay paquetes válidos para procesar.");
+      const q=new URLSearchParams({targets:JSON.stringify(targets),t:String(Date.now())});
+      const closed=await json("./api/close-recent-apps?"+q.toString(),{method:"POST"});
 
+      if(!closed.ok){
+        if(closed.reason==="accessibility_required"){
+          $("usageResult").innerHTML="<strong>Accesibilidad pendiente.</strong><br>Toca “Autorizar accesibilidad”, activa el servicio de OptiCore y vuelve a intentar.";
+        }else{
+          $("usageResult").innerHTML="<strong>No se pudo cerrar.</strong><br>"+escapeHtml(closed.reason||closed.message||"Android rechazó la acción.");
+        }
+        return;
+      }
+
+      const packages=[...new Set(targets.map(x=>x.package).filter(Boolean))];
       let release=null;
       let clean=null;
 
-      try{
-        release=await json("./api/release-selected?packages="+encodeURIComponent(packages.join(","))+"&t="+Date.now(),{method:"POST"});
-      }catch(e){
-        release={ok:false,reason:String(e)};
-      }
+      if(packages.length){
+        try{
+          release=await json("./api/release-selected?packages="+encodeURIComponent(packages.join(","))+"&t="+Date.now(),{method:"POST"});
+        }catch(e){
+          release={ok:false,reason:String(e)};
+        }
 
-      try{
-        const q=new URLSearchParams({
-          token:"CACHE-CLEAN-2026",
-          mode:"manual",
-          packages:packages.join(","),
-          t:String(Date.now())
-        });
-        clean=await json("./api/cache-clean?"+q.toString());
-      }catch(e){
-        clean={ok:false,reason:String(e)};
+        try{
+          const cq=new URLSearchParams({
+            token:"CACHE-CLEAN-2026",
+            mode:"manual",
+            packages:packages.join(","),
+            t:String(Date.now())
+          });
+          clean=await json("./api/cache-clean?"+cq.toString());
+        }catch(e){
+          clean={ok:false,reason:String(e)};
+        }
       }
-
-      const releaseOk=!!(release&&release.ok);
-      const cleanOk=!!(clean&&clean.ok);
-      const delta=releaseOk?(Number(release.measured_delta_mb)||0):0;
-      const freed=cleanOk?(Number(clean.freed_mb)||0):0;
 
       let html="<strong>Proceso terminado.</strong><br>";
-      html+="Aplicaciones seleccionadas: "+packages.length+".<br>";
-      if(releaseOk){
-        html+="Liberación solicitada a Android: "+(release.attempted_count||0)+" · RAM antes: "+n(release.ram_before_mb)+" MB · RAM después: "+n(release.ram_after_mb)+" MB · Cambio: "+(delta>=0?"+":"")+n(delta)+" MB.<br>";
-      }else{
-        html+="Liberación de procesos: Android no permitió completar esta parte"+(release&&release.reason?" ("+escapeHtml(release.reason)+")":"")+".<br>";
+      html+="Solicitadas: "+targets.length+
+        " · Tarjetas cerradas: "+(closed.closed_count||0)+
+        " · No encontradas: "+(closed.not_found_count||0)+
+        " · Protegidas: "+(closed.protected_count||0)+".<br>";
+
+      if(release&&release.ok){
+        const delta=Number(release.measured_delta_mb)||0;
+        html+="RAM antes: "+n(release.ram_before_mb)+" MB · RAM después: "+n(release.ram_after_mb)+" MB · Cambio: "+(delta>=0?"+":"")+n(delta)+" MB.<br>";
+      }else if(packages.length){
+        html+="Liberación de procesos: Android mantuvo el control de esta parte.<br>";
       }
-      if(cleanOk){
-        html+="Caché accesible liberada: <b>"+n(freed)+" MB</b> · procesadas: "+(clean.cleaned_count||0)+" · omitidas: "+(clean.skipped_count||0)+".";
-      }else{
+
+      if(clean&&clean.ok){
+        html+="Caché accesible liberada: <b>"+n(Number(clean.freed_mb)||0)+" MB</b> · procesadas: "+(clean.cleaned_count||0)+" · omitidas: "+(clean.skipped_count||0)+".";
+      }else if(packages.length){
         html+="Caché: Android no expuso caché limpiable para esta selección.";
       }
-      $("usageResult").innerHTML=html;
 
+      $("usageResult").innerHTML=html;
       await scan().catch(()=>{});
       await usage().catch(()=>{});
 
@@ -354,6 +372,7 @@ button:disabled{opacity:.45}
   $("releaseBackgroundBtn").onclick=()=>releaseBackgroundApps().catch(e=>$("usageResult").textContent=String(e));
   $("selectAllBtn").onclick=toggleSelectAll;
   $("closeSelectedBtn").onclick=()=>closeSelectedApps().catch(e=>$("usageResult").textContent=String(e));
+  $("usageSettingsBtn").onclick=()=>openSettings("./api/open-accessibility-settings",$("usageResult"));
   $("batterySettingsBtn").onclick=()=>openSettings("./api/open-battery-settings",$("batteryResult"));
 
   scan().catch(()=>{});
