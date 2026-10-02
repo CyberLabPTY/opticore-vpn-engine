@@ -25,6 +25,7 @@ on:
       - opticore-final-v037
       - opticore-final-v038
       - opticore-final-v039
+      - opticore-final-v040
 
 jobs:
   build:
