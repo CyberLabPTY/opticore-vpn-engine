@@ -65,7 +65,7 @@ button:disabled{opacity:.45}
     </div>
     <div id="boostResult" class="result">Todavía no se ha ejecutado ninguna liberación.</div>
     <div id="candidateList" class="list"></div>
-    <div class="note">La liberación intensiva solicita a Android finalizar procesos de usuario en segundo plano. Android puede ignorar la solicitud o reiniciar procesos si los necesita. No equivale a “Forzar detención” ni elimina tarjetas de Recientes. OptiCore protege componentes del sistema, launcher, teclado y su propio proceso.</div>
+    <div class="note">La liberación intensiva puede cerrar aplicaciones de usuario en segundo plano. Android puede reiniciar algunas si las necesita. OptiCore protege componentes del sistema, launcher, teclado y su propio proceso.</div>
   </section>
 
   <section class="section">
@@ -87,7 +87,7 @@ button:disabled{opacity:.45}
       <button id="closeSelectedBtn" class="danger" disabled>Liberar seleccionadas</button>
     </div>
     <div id="usageResult" class="result">OptiCore usa acceso de uso solo para identificar actividad reciente de aplicaciones; no lee su contenido.</div>
-    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre aplicaciones de usuario permitidas por Android. También puedes marcar aplicaciones concretas y usar “Liberar seleccionadas”. Esto solicita liberar procesos en segundo plano; no equivale a “Forzar detención” ni elimina tarjetas de la pantalla Recientes. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
+    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre candidatas de usuario permitidas por Android. También puedes marcar aplicaciones concretas y usar “Liberar seleccionadas”. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
     <div id="usageList" class="list"></div>
   </section>
 </main>
