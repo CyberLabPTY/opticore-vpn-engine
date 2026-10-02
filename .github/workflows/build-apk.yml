@@ -32,6 +32,7 @@ on:
       - opticore-final-v041-bridge
       - opticore-final-v042-dns
       - opticore-final-v043-persistent-pairing
+      - opticore-final-v044-close-confirmation
 
 jobs:
   build:
@@ -128,3 +129,15 @@ jobs:
             --target "${GITHUB_SHA}" \
             --title "OptiCore 0.4.3 Test" \
             --notes "Build de prueba 0.4.3 con enlace persistente por dispositivo."
+
+      - name: Publish direct OptiCore 0.4.4 test APK
+        if: github.ref == 'refs/heads/opticore-final-v044-close-confirmation'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk OptiCore-v0.4.4.apk
+          gh release delete v0.4.4-test --cleanup-tag --yes || true
+          gh release create v0.4.4-test OptiCore-v0.4.4.apk \
+            --target "${GITHUB_SHA}" \
+            --title "OptiCore 0.4.4 Test" \
+            --notes "Build de prueba 0.4.4 con verificacion retardada de cierre en Android Recents."
