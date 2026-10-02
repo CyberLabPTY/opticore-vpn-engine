@@ -41,6 +41,12 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
     private static volatile RecentsAccessibilityService instance;
 
+    private final Object recentCaptureLock = new Object();
+    private final LinkedHashMap<String, JSONObject> recentEventApps =
+            new LinkedHashMap<>();
+    private volatile boolean recentCaptureActive = false;
+    private volatile long lastRecentCaptureAt = 0L;
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
@@ -49,8 +55,27 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        // OptiCore does not record user content. The service is used only
-        // when the user requests a scan/close action from the local panel.
+        // OptiCore does not keep a browsing history. During an explicit
+        // Recents scan only, collect app labels exposed by Android's
+        // accessibility events. This is important on Samsung/One UI where
+        // the Recents tree may be populated through content-change events
+        // before getRootInActiveWindow() exposes the complete card list.
+        if (!recentCaptureActive || event == null) return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastRecentCaptureAt < 90L) return;
+        lastRecentCaptureAt = now;
+
+        try {
+            AccessibilityNodeInfo source = event.getSource();
+            captureRecentAppsFromNode(source);
+
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root != source) {
+                captureRecentAppsFromNode(root);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     @Override
@@ -96,31 +121,42 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             }
 
             RecentsAccessibilityService service = instance;
+            service.beginRecentCapture();
 
-            if (!service.performGlobalActionSync(GLOBAL_ACTION_RECENTS)) {
-                out.put("ok", false);
-                out.put("reason", "could_not_open_recents");
-                out.put("apps", new JSONArray());
-                return out;
-            }
+            JSONArray apps = new JSONArray();
 
-            sleepQuietly(900L);
+            try {
+                if (!service.performGlobalActionSync(GLOBAL_ACTION_RECENTS)) {
+                    out.put("ok", false);
+                    out.put("reason", "could_not_open_recents");
+                    out.put("apps", new JSONArray());
+                    return out;
+                }
 
-            JSONArray apps =
-                    service.collectRecentCardsFromVisibleWindows(context);
+                // Give One UI time to publish the Recents window and its
+                // TYPE_WINDOW_CONTENT_CHANGED events.
+                sleepQuietly(1000L);
 
-            // Samsung/One UI and some OEM launchers populate the Recents
-            // accessibility tree a little later than the window switch.
-            // One short retry avoids reporting an empty list too early.
-            if (apps.length() == 0) {
-                sleepQuietly(450L);
                 apps =
                         service.collectRecentCardsFromVisibleWindows(context);
-            }
 
-            // Return explicitly to the OptiCore panel instead of leaving
-            // the user in Android Recents or a previous Settings screen.
-            service.returnToCallerSoon(260L);
+                service.mergeEventCapturedApps(apps);
+
+                // A second pass catches cards that One UI lazily inflates
+                // after the first horizontal/visual Recents layout settles.
+                if (apps.length() == 0) {
+                    sleepQuietly(650L);
+                    apps =
+                            service.collectRecentCardsFromVisibleWindows(context);
+                    service.mergeEventCapturedApps(apps);
+                }
+            } finally {
+                service.endRecentCapture();
+
+                // Return explicitly to the OptiCore panel instead of leaving
+                // the user in Android Recents or a previous Settings screen.
+                service.returnToCallerSoon(220L);
+            }
 
             out.put("ok", true);
             out.put("apps", apps);
@@ -252,6 +288,75 @@ public final class RecentsAccessibilityService extends AccessibilityService {
         }
 
         return out;
+    }
+
+    private void beginRecentCapture() {
+        synchronized (recentCaptureLock) {
+            recentEventApps.clear();
+            recentCaptureActive = true;
+            lastRecentCaptureAt = 0L;
+        }
+    }
+
+    private void endRecentCapture() {
+        recentCaptureActive = false;
+    }
+
+    private void captureRecentAppsFromNode(
+            AccessibilityNodeInfo node) {
+
+        if (node == null || !recentCaptureActive) return;
+
+        try {
+            JSONArray apps =
+                    collectRecentCards(
+                            getApplicationContext(),
+                            node);
+
+            synchronized (recentCaptureLock) {
+                mergeRecentApps(
+                        recentEventApps,
+                        apps);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void mergeEventCapturedApps(
+            JSONArray destination) throws Exception {
+
+        LinkedHashMap<String, JSONObject> merged =
+                new LinkedHashMap<>();
+
+        mergeRecentApps(
+                merged,
+                destination);
+
+        synchronized (recentCaptureLock) {
+            for (JSONObject item :
+                    recentEventApps.values()) {
+
+                JSONArray one =
+                        new JSONArray();
+
+                one.put(item);
+
+                mergeRecentApps(
+                        merged,
+                        one);
+            }
+        }
+
+        while (destination.length() > 0) {
+            destination.remove(
+                    destination.length() - 1);
+        }
+
+        for (JSONObject item :
+                merged.values()) {
+
+            destination.put(item);
+        }
     }
 
     private JSONArray collectRecentCardsFromVisibleWindows(
