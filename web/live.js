@@ -219,6 +219,8 @@
     panel.appendChild(safe);
   }
 
+  window.OptiCoreRenderCacheInventory=renderCacheInventory;
+
   if(reload){
     reload.onclick=async function(){
       const old=reload.textContent;
