@@ -176,7 +176,7 @@
           var copy=response.clone();
 
           copy.json().then(function(data){
-            if(data && data.ok && Number(data.cleaned_count)>0){
+            if(data && data.ok){
               setTimeout(function(){
                 scan("after-clean");
               },350);
