@@ -1,5 +1,8 @@
 name: Build OptiCore VPN APK
 
+permissions:
+  contents: write
+
 concurrency:
   group: opticore-build-${{ github.ref }}
   cancel-in-progress: true
@@ -113,3 +116,15 @@ jobs:
           name: OptiCore-Web-PWA
           path: web/
           if-no-files-found: error
+
+      - name: Publish direct OptiCore 0.4.3 test APK
+        if: github.ref == 'refs/heads/opticore-final-v043-persistent-pairing'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk OptiCore-v0.4.3.apk
+          gh release delete v0.4.3-test --cleanup-tag --yes || true
+          gh release create v0.4.3-test OptiCore-v0.4.3.apk \
+            --target "${GITHUB_SHA}" \
+            --title "OptiCore 0.4.3 Test" \
+            --notes "Build de prueba 0.4.3 con enlace persistente por dispositivo."
