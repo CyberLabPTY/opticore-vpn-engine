@@ -26,6 +26,7 @@ on:
       - opticore-final-v038
       - opticore-final-v039
       - opticore-final-v040
+      - opticore-final-v041-bridge
 
 jobs:
   build:
@@ -42,9 +43,11 @@ jobs:
           test -f web/styles.css
           test -f web/manifest.webmanifest
           test -f web/sw.js
+          test -f web/bridge.js
           test -f web/icon-192.png
           test -f web/icon-512.png
           node --check web/app.js
+          node --check web/bridge.js
           python -m json.tool web/manifest.webmanifest >/dev/null
 
       - name: Set up Java 17
