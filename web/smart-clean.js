@@ -5,6 +5,7 @@ const oldClick=btn.onclick;
 const names={"org.telegram.messenger":"Telegram","com.zhiliaoapp.musically":"TikTok","com.mixplorer.silver":"MiXplorer","com.whatsapp":"WhatsApp","com.pixonic.wwr":"War Robots","com.google.android.apps.maps":"Google Maps","com.linkedin.android":"LinkedIn","com.qrcode.barcode.scanner.reader.generator.pro":"QR Scanner","com.sec.android.app.launcher":"Samsung Launcher","com.instagram.android":"Instagram","com.facebook.katana":"Facebook","com.waze":"Waze"};
 const autoSafe=["com.zhiliaoapp.musically","com.mixplorer.silver","com.google.android.apps.maps","com.linkedin.android","com.qrcode.barcode.scanner.reader.generator.pro","com.instagram.android","com.facebook.katana","com.waze"];
 let mode="intelligent";
+let lastCleanSummary=null;
 function nm(p){return names[p]||p}
 function isSystem(p){return p.indexOf("com.sec.")===0||p.indexOf("com.samsung.")===0||p==="com.android.systemui"||p==="com.google.android.gms"||p==="com.google.android.gsf"}
 function isProtectedAuto(p){return p==="org.telegram.messenger"||p==="com.whatsapp"||p==="com.pixonic.wwr"}
@@ -37,6 +38,7 @@ async function doClean(){
  const pk=a.map(function(x){return x.dataset.package}).join(",");
  try{
   const r=await fetch("/api/cache-clean?mode="+mode+"&packages="+pk+"&token=CACHE-CLEAN-2026&t="+Date.now(),{cache:"no-store"});if(!r.ok)throw 0;const d=await r.json();if(!d.ok)throw 0;
+  lastCleanSummary={freed_mb:Number(d.freed_mb)||0,cleaned_count:Number(d.cleaned_count)||0,skipped_count:Number(d.skipped_count)||0};
   let h="<div style=\"font-size:20px;font-weight:800\">Limpieza terminada</div><div style=\"margin:8px 0;color:#7fe3c5;font-weight:800\">Espacio liberado realmente: "+d.freed_mb+" MB</div>";
   (d.results||[]).forEach(function(x){h+="<div style=\"display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid rgba(120,180,200,.15)\"><span>"+nm(x.package)+" · "+x.status+"</span><strong>"+x.freed_mb+" MB</strong></div>"});
   h+="<button id=\"rescanSmart\" style=\"width:100%;margin-top:12px;padding:13px;border-radius:14px\">Volver a escanear</button>";
@@ -56,4 +58,45 @@ function enhance(){
  setMode("intelligent");
 }
 btn.onclick=async function(e){await oldClick.call(this,e);enhance()};
+
+/* opticore-cache-auto-sync-v036
+ * Rebuild the visible inventory from the fresh post-clean scan so stale
+ * cache values are never left on screen.
+ */
+window.addEventListener("opticore-cache-synced",function(event){
+ try{
+  if(!event || !event.detail || event.detail.reason!=="after-clean" || !event.detail.data)return;
+  if(typeof window.OptiCoreRenderCacheInventory!=="function")return;
+
+  setTimeout(function(){
+   try{
+    window.OptiCoreRenderCacheInventory(event.detail.data);
+    enhance();
+
+    const panel=document.getElementById("cacheInventoryPanel");
+    if(panel && lastCleanSummary){
+     const note=document.createElement("div");
+     note.id="cacheLastCleanSummary";
+     note.style.margin="10px 0 14px";
+     note.style.padding="12px";
+     note.style.border="1px solid rgba(83,223,207,.22)";
+     note.style.borderRadius="12px";
+     note.style.background="rgba(5,36,43,.55)";
+     note.innerHTML="<strong>Inventario actualizado automáticamente</strong><br>"+
+       "Última limpieza real: "+lastCleanSummary.freed_mb.toFixed(1)+" MB · "+
+       "Limpiadas: "+lastCleanSummary.cleaned_count+" · "+
+       "Omitidas: "+lastCleanSummary.skipped_count+".";
+     const title=panel.firstElementChild;
+     if(title && title.nextSibling)panel.insertBefore(note,title.nextSibling);
+     else panel.appendChild(note);
+    }
+
+    if(typeof toast==="function"){
+     toast("Inventario de caché actualizado automáticamente");
+    }
+   }catch(_){}
+  },250);
+ }catch(_){}
+});
+
 })();
