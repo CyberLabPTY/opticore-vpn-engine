@@ -241,7 +241,7 @@ public final class MainActivity extends Activity {
 
             Toast.makeText(
                     this,
-                    "Web OptiCore enlazada de forma segura",
+                    "Web OptiCore enlazada de forma permanente",
                     Toast.LENGTH_SHORT).show();
 
             String callback =
