@@ -10,8 +10,8 @@ android {
         applicationId "lab.opticore.vpn"
         minSdk 28
         targetSdk 36
-        versionCode 29
-        versionName "0.3.8"
+        versionCode 30
+        versionName "0.3.9"
     }
 
     compileOptions {
