@@ -101,8 +101,25 @@
     var state=qs("#oc-engine-state");
     var model=qs("#oc-device-model");
     var updated=qs("#oc-last-update");
+    var localPanel=
+      location.hostname==="127.0.0.1" ||
+      location.hostname==="localhost";
 
-    fetch("/data/device-status.json?t="+Date.now(),{
+    if(!localPanel){
+      if(state){
+        state.textContent="Modo web público";
+        state.className="oc-state-warn";
+      }
+      if(model){
+        model.textContent="Navegador";
+      }
+      if(updated){
+        updated.textContent="Sin datos Android locales";
+      }
+      return;
+    }
+
+    fetch("./data/device-status.json?t="+Date.now(),{
       cache:"no-store"
     })
     .then(function(r){
