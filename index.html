@@ -81,7 +81,7 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
   .row .right{max-width:48%}
   .mode{padding:10px 12px}
 }
-</style><link rel="stylesheet" href="./professional-ui.css?v=3"><link id="oc-favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%2307131d%22/%3E%3Cpath d=%22M32 7 51 15v14c0 13-8 23-19 28-11-5-19-15-19-28V15z%22 fill=%22none%22 stroke=%22%2353dfcf%22 stroke-width=%224%22/%3E%3Cpath d=%22M21 31h8l4-10 5 22 4-12h7%22 fill=%22none%22 stroke=%22%235bc0eb%22 stroke-width=%224%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E"><title>OptiCore Lab | Diagnóstico y Optimización Android</title><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icon-192.svg"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script defer src="./pwa-install.js?v=4"></script></head>
+</style><link rel="stylesheet" href="./professional-ui.css?v=4"><link id="oc-favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%2307131d%22/%3E%3Cpath d=%22M32 7 51 15v14c0 13-8 23-19 28-11-5-19-15-19-28V15z%22 fill=%22none%22 stroke=%22%2353dfcf%22 stroke-width=%224%22/%3E%3Cpath d=%22M21 31h8l4-10 5 22 4-12h7%22 fill=%22none%22 stroke=%22%235bc0eb%22 stroke-width=%224%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E"><title>OptiCore Lab | Diagnóstico y Optimización Android</title><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icon-192.svg"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script defer src="./pwa-install.js?v=5"></script></head>
 <body>
 <main class="wrap">
 <header class="top">
@@ -225,29 +225,33 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
 <div class="toast" id="toast"></div>
 
 <script>
+const LOCAL_ENGINE =
+  location.hostname === "127.0.0.1" ||
+  location.hostname === "localhost";
+
 const FALLBACK={
-  engine_version:"1.1",
-  model:"SM-G955U",
-  android:"9",
-  ram_available_percent:26.7,
-  ram_state:"NORMAL",
-  swap_used_percent:64.8,
-  swap_state:"MODERADO",
-  gpu_current_mhz:257,
-  gpu_max_mhz:670,
-  battery_celsius:"34.7",
-  cache_visible_mb:212.3,
-  cache_state:"MODERADO",
-  network_interface:"wlan0",
-  cloudflare_ping_ms:"21.960",
-  quad9_ping_ms:"16.871",
-  google_ping_ms:"85.851",
-  cloudflare_doh_seconds:"0.177300",
-  google_doh_seconds:"0.331557",
-  camera_manual_sensor:1,
-  camera_manual_processing:1,
-  camera_raw:1,
-  camera_full:1
+  engine_version:"web-public",
+  model:"Navegador web",
+  android:"N/D",
+  ram_available_percent:"N/D",
+  ram_state:"REQUIERE APP",
+  swap_used_percent:"N/D",
+  swap_state:"REQUIERE APP",
+  gpu_current_mhz:"N/D",
+  gpu_max_mhz:"N/D",
+  battery_celsius:"N/D",
+  cache_visible_mb:"N/D",
+  cache_state:"REQUIERE APP",
+  network_interface:"web",
+  cloudflare_ping_ms:"N/D",
+  quad9_ping_ms:"N/D",
+  google_ping_ms:"N/D",
+  cloudflare_doh_seconds:"N/D",
+  google_doh_seconds:"N/D",
+  camera_manual_sensor:0,
+  camera_manual_processing:0,
+  camera_raw:0,
+  camera_full:0
 };
 
 let DATA=FALLBACK;
@@ -269,68 +273,80 @@ function stateClass(v){
 
 function render(d,source){
   DATA=d;
-  $("model").textContent=d.model||"Dispositivo";
-  $("android").textContent="Android "+(d.android||"-");
+  const known=v=>v!==null && v!==undefined && v!=="" && v!=="N/D";
+  $("model").textContent=d.model||"Navegador web";
+  $("android").textContent=known(d.android) ? "Android "+d.android : "No disponible desde web";
   $("time").textContent=new Date().toLocaleTimeString();
   $("source").textContent=source;
-  $("net").textContent="RED "+String(d.network_interface||"-").toUpperCase();
+  $("net").textContent=d.network_interface && d.network_interface!=="web"
+    ? "RED "+String(d.network_interface).toUpperCase()
+    : "WEB";
 
-  $("ram").textContent=d.ram_available_percent+"%";
-  $("swap").textContent=d.swap_used_percent+"%";
-  $("gpu").textContent=d.gpu_current_mhz+" / "+d.gpu_max_mhz+" MHz";
-  $("temp").textContent=d.battery_celsius+" C";
-  $("cache").textContent=d.cache_visible_mb+" MB";
+  $("ram").textContent=known(d.ram_available_percent)?d.ram_available_percent+"%":"N/D";
+  $("swap").textContent=known(d.swap_used_percent)?d.swap_used_percent+"%":"N/D";
+  $("gpu").textContent=known(d.gpu_current_mhz)&&known(d.gpu_max_mhz)
+    ? d.gpu_current_mhz+" / "+d.gpu_max_mhz+" MHz"
+    : "N/D";
+  $("temp").textContent=known(d.battery_celsius)?d.battery_celsius+" C":"N/D";
+  $("cache").textContent=known(d.cache_visible_mb)?d.cache_visible_mb+" MB":"N/D";
 
   [["ramS",d.ram_state],["swapS",d.swap_state],["cacheS",d.cache_state]].forEach(([id,val])=>{
     const el=$(id);
-    el.textContent=val;
+    el.textContent=val||"REQUIERE APP";
     el.className="st "+stateClass(val);
   });
 
-  $("cfp").textContent=d.cloudflare_ping_ms;
-  $("q9p").textContent=d.quad9_ping_ms;
-  $("gp").textContent=d.google_ping_ms;
-  $("cfh").textContent=d.cloudflare_doh_seconds;
-  $("gh").textContent=d.google_doh_seconds;
+  $("cfp").textContent=known(d.cloudflare_ping_ms)?d.cloudflare_ping_ms:"N/D";
+  $("q9p").textContent=known(d.quad9_ping_ms)?d.quad9_ping_ms:"N/D";
+  $("gp").textContent=known(d.google_ping_ms)?d.google_ping_ms:"N/D";
+  $("cfh").textContent=known(d.cloudflare_doh_seconds)?d.cloudflare_doh_seconds:"N/D";
+  $("gh").textContent=known(d.google_doh_seconds)?d.google_doh_seconds:"N/D";
 
   const caps=[];
   if(+d.camera_manual_sensor) caps.push("SENSOR");
   if(+d.camera_manual_processing) caps.push("POST");
   if(+d.camera_raw) caps.push("RAW");
   if(+d.camera_full) caps.push("FULL");
-  $("cam").textContent=caps.join(" - ")||"No detectado";
+  $("cam").textContent=caps.join(" - ")||(LOCAL_ENGINE?"No detectado":"Requiere app Android");
 
   $("ramAdvice").textContent=
-    d.ram_state==="NORMAL"
+    !known(d.ram_available_percent)
+      ?"Las métricas reales de RAM requieren el motor Android local."
+      : d.ram_state==="NORMAL"
       ?"RAM dentro del rango normal; no conviene forzar limpieza."
       :"Revisar presion de memoria antes de actuar.";
 
   $("cacheAdvice").textContent=
-    d.cache_visible_mb+" MB visibles; cualquier borrado requerira confirmacion.";
+    !known(d.cache_visible_mb)
+      ?"El inventario de caché de otras apps requiere el motor Android local."
+      : d.cache_visible_mb+" MB visibles; cualquier borrado requerira confirmacion.";
 
   const samples=[
-    ["Cloudflare",Number(d.cloudflare_ping_ms)],
-    ["Quad9",Number(d.quad9_ping_ms)],
-    ["Google",Number(d.google_ping_ms)]
-  ].filter(x=>Number.isFinite(x[1])).sort((a,b)=>a[1]-b[1]);
+    ["Cloudflare",d.cloudflare_ping_ms],
+    ["Quad9",d.quad9_ping_ms],
+    ["Google",d.google_ping_ms]
+  ].filter(x=>known(x[1])).map(x=>[x[0],Number(x[1])]).filter(x=>Number.isFinite(x[1])).sort((a,b)=>a[1]-b[1]);
 
-  if(samples[0]){
-    $("netAdvice").textContent=
-      "Menor ping de esta muestra: "+samples[0][0]+
-      ". Aun no basta para cambiar DNS.";
-  }
+  $("netAdvice").textContent=samples[0]
+    ?"Menor ping de esta muestra: "+samples[0][0]+". Aun no basta para cambiar DNS."
+    :"El análisis DNS profundo requiere el motor Android local.";
 }
 
 async function loadJson(){
+  if(!LOCAL_ENGINE){
+    render(FALLBACK,"web pública");
+    toast("Modo web: las métricas Android reales requieren la app OptiCore.");
+    return;
+  }
   try{
     const r=await fetch("data/device-status.json?t="+Date.now(),{cache:"no-store"});
     if(!r.ok) throw new Error("HTTP");
     const d=await r.json();
-    render(d,"device-status.json");
+    render(d,"motor local");
     toast("Diagnóstico cargado");
   }catch(e){
-    render(DATA,"linea base");
-    toast("Usando linea base. Puedes importar el JSON.");
+    render(FALLBACK,"sin datos locales");
+    toast("Motor local temporalmente no disponible.");
   }
 }
 
@@ -390,10 +406,10 @@ if(savedMode){
   });
 }
 
-render(FALLBACK,"linea base");
+render(FALLBACK,LOCAL_ENGINE?"sin datos locales":"web pública");
 loadJson();
 </script>
-<script src="./live.js?v=4"></script><script src="./smart-clean.js?v=4"></script><script src="./professional-ui.js?v=3"></script><script src="./cache-sync.js?v=4"></script><script src="./connection-guard.js?v=3"></script><script src="./resource-panel.js?v=3"></script><script src="./resource-summary.js?v=3"></script><section id="opticore-bridge-v1" style="margin:18px 0;padding:18px;border:1px solid rgba(72,213,202,.28);border-radius:18px;background:rgba(7,27,41,.86)">
+<script src="./live.js?v=5"></script><script src="./smart-clean.js?v=5"></script><script src="./professional-ui.js?v=4"></script><script src="./cache-sync.js?v=5"></script><script src="./connection-guard.js?v=4"></script><script src="./resource-panel.js?v=4"></script><script src="./resource-summary.js?v=4"></script><section id="opticore-bridge-v1" style="margin:18px 0;padding:18px;border:1px solid rgba(72,213,202,.28);border-radius:18px;background:rgba(7,27,41,.86)">
 <div style="font-size:22px;font-weight:800;color:#eef7ff">Privacidad + OptiCore VPN</div>
 <div style="margin-top:7px;color:#9fb9c8;line-height:1.5">Estado externo de tu conexión y acceso directo al motor VPN Android.</div>
 <div style="display:grid;gap:10px;margin-top:16px">
@@ -474,8 +490,8 @@ refreshPrivacy();
 (function(){
 function fmt(total){total=Math.max(0,Number(total)||0);var h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=Math.floor(total%60);function p(n){return n<10?"0"+n:n}return h>0?h+":"+p(m)+":"+p(s):p(m)+":"+p(s)}
 function ensure(){var host=document.getElementById("opticore-bridge-v1");if(!host)return null;var box=document.getElementById("ocSecurityMonitor");if(box)return box;box=document.createElement("div");box.id="ocSecurityMonitor";box.className="oc-secmon";box.innerHTML="<div class=\"oc-sec-head\"><div id=\"ocMainPill\" class=\"oc-pill wait\"><span class=\"oc-dot\"></span><span id=\"ocMainText\">VERIFICANDO VPN</span></div><div class=\"oc-live\">LIVE</div></div><div class=\"oc-flow\"><div id=\"ocBars\" class=\"oc-bars idle\"><i></i><i></i><i></i><i></i><i></i></div><div class=\"oc-flow-main\"><div id=\"ocFlowTitle\" class=\"oc-flow-title\">Analizando túnel seguro</div><div id=\"ocFlowSub\" class=\"oc-flow-sub\">Esperando estado de OptiCore</div></div></div><div class=\"oc-sec-grid\"><div class=\"oc-mini\"><div class=\"oc-mini-k\">Estado del túnel</div><div id=\"ocTunnelPro\" class=\"oc-mini-v\">Comprobando...</div></div><div class=\"oc-mini\"><div class=\"oc-mini-k\">Sesión protegida</div><div id=\"ocSessionPro\" class=\"oc-mini-v\">--</div></div></div>";var grid=document.getElementById("opticoreNetwork");var anchor=grid&&grid.parentElement&&grid.parentElement.parentElement;if(anchor&&anchor.parentElement===host)host.insertBefore(box,anchor);else host.appendChild(box);return box}
-function paint(mode,d){ensure();var pill=document.getElementById("ocMainPill"),txt=document.getElementById("ocMainText"),bars=document.getElementById("ocBars"),title=document.getElementById("ocFlowTitle"),sub=document.getElementById("ocFlowSub"),tun=document.getElementById("ocTunnelPro"),ses=document.getElementById("ocSessionPro");if(!pill)return;pill.className="oc-pill "+mode;if(mode==="on"){txt.textContent="VPN PROTEGIDA";bars.className="oc-bars";title.textContent="CANAL CIFRADO ACTIVO";sub.textContent=d&&d.endpoint?d.endpoint:"OptiCore VPN";tun.textContent="WireGuard conectado";ses.textContent=fmt(d&&d.connected_seconds)}else if(mode==="off"){txt.textContent="VPN DESCONECTADA";bars.className="oc-bars idle";title.textContent="TÚNEL INACTIVO";sub.textContent="El tráfico no está usando OptiCore VPN";tun.textContent="Desconectado";ses.textContent="00:00"}else if(mode==="na"){txt.textContent="OPTICORE NO DISPONIBLE";bars.className="oc-bars idle";title.textContent="MONITOR SIN RESPUESTA";sub.textContent="Abre OptiCore para recuperar el estado";tun.textContent="No disponible";ses.textContent="--"}else{txt.textContent="VERIFICANDO VPN";bars.className="oc-bars";title.textContent="ANALIZANDO TÚNEL";sub.textContent="Consultando OptiCore local";tun.textContent="Comprobando...";ses.textContent="--"}}
-async function refresh(){ensure();if(!navigator.onLine){paint("off");return}try{var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("http");var d=await r.json();paint(d.connected?"on":"off",d)}catch(e){paint("na")}}
+function paint(mode,d){ensure();var pill=document.getElementById("ocMainPill"),txt=document.getElementById("ocMainText"),bars=document.getElementById("ocBars"),title=document.getElementById("ocFlowTitle"),sub=document.getElementById("ocFlowSub"),tun=document.getElementById("ocTunnelPro"),ses=document.getElementById("ocSessionPro");if(!pill)return;pill.className="oc-pill "+mode;if(mode==="on"){txt.textContent="VPN PROTEGIDA";bars.className="oc-bars";title.textContent="CANAL CIFRADO ACTIVO";sub.textContent=d&&d.endpoint?d.endpoint:"OptiCore VPN";tun.textContent="WireGuard conectado";ses.textContent=fmt(d&&d.connected_seconds)}else if(mode==="off"){txt.textContent="VPN DESCONECTADA";bars.className="oc-bars idle";title.textContent="TÚNEL INACTIVO";sub.textContent="El tráfico no está usando OptiCore VPN";tun.textContent="Desconectado";ses.textContent="00:00"}else if(mode==="web"){txt.textContent="MODO WEB PÚBLICO";bars.className="oc-bars idle";title.textContent="APP LOCAL NO ENLAZADA";sub.textContent="La VPN se administra y verifica dentro de OptiCore Android";tun.textContent="Requiere app";ses.textContent="--"}else if(mode==="na"){txt.textContent="APP LOCAL NO ENLAZADA";bars.className="oc-bars idle";title.textContent="TELEMETRÍA LOCAL NO DISPONIBLE";sub.textContent="Abre el panel local de OptiCore para ver el túnel";tun.textContent="No enlazada";ses.textContent="--"}else{txt.textContent="VERIFICANDO VPN";bars.className="oc-bars";title.textContent="ANALIZANDO TÚNEL";sub.textContent="Consultando OptiCore local";tun.textContent="Comprobando...";ses.textContent="--"}}
+async function refresh(){ensure();if(!navigator.onLine){paint("off");return}if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){paint("web");return}try{var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("http");var d=await r.json();paint(d.connected?"on":"off",d)}catch(e){paint("na")}}
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){ensure();refresh()})}else{ensure();refresh()}
 setInterval(refresh,3000);window.addEventListener("focus",refresh);window.addEventListener("online",refresh);window.addEventListener("offline",refresh);
 })();
@@ -539,6 +555,9 @@ line(rxHistory,"#53dfcf");line(txHistory,"#5bc0eb");
 function setText(id,value){var e=document.getElementById(id);if(e)e.textContent=value}
 async function refresh(){
 if(!ensure())return;
+if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){
+setText("qfRxRate","--");setText("qfTxRate","--");setText("qfRxTotal","--");setText("qfTxTotal","--");setText("qfRxSmooth","--");setText("qfTxSmooth","--");setText("qfSamples","Telemetría disponible en el panel local de OptiCore");setText("qfActivity","Actividad --");var b=document.getElementById("qfBurst");if(b){b.className="qf-burst";b.textContent="REQUIERE APP"}return;
+}
 try{
 var r=await fetch(API+"?qflow="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);var d=await r.json();
 if(d.telemetry_source!=="wireguard_backend")throw new Error("Fuente no válida");
@@ -608,6 +627,15 @@ setInterval(refresh,1000);window.addEventListener("focus",refresh);window.addEve
   }
 
   async function readOptiCore(){
+    if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){
+      vpn.textContent="APP LOCAL NO ENLAZADA";
+      endpoint.textContent="Disponible en OptiCore Android";
+      config.textContent="Requiere app";
+      duration.textContent="--";
+      version.textContent="Web pública";
+      net.textContent=navigator.onLine?"INTERNET ACTIVO · MODO WEB":"SIN CONEXIÓN";
+      return;
+    }
     try{
       var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{
         cache:"no-store"
@@ -641,7 +669,7 @@ setInterval(refresh,1000);window.addEventListener("focus",refresh);window.addEve
       }
 
     }catch(e){
-      vpn.textContent="OPTICORE NO DISPONIBLE";
+      vpn.textContent="APP LOCAL NO ENLAZADA";
       endpoint.textContent="--";
       config.textContent="No disponible";
       duration.textContent="--";
