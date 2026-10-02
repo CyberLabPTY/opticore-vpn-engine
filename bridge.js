@@ -550,6 +550,84 @@
     }
   }
 
+  async function requestReadOnlyEndpoint(path,timeoutMs){
+    if(!validToken(token)){
+      throw new Error("not_paired");
+    }
+
+    var controller=
+      typeof AbortController!=="undefined"
+        ? new AbortController()
+        : null;
+
+    var timeout=setTimeout(
+      function(){
+        if(controller){
+          try{ controller.abort(); }catch(e){}
+        }
+      },
+      timeoutMs||30000
+    );
+
+    try{
+      var response=
+        await fetch(
+          "http://127.0.0.1:8766"+path+
+          (path.indexOf("?")>=0?"&":"?")+
+          "t="+Date.now(),
+          {
+            method:"GET",
+            mode:"cors",
+            cache:"no-store",
+            headers:{
+              "X-OptiCore-Bridge":token
+            },
+            signal:controller
+              ? controller.signal
+              : undefined,
+            targetAddressSpace:"loopback"
+          }
+        );
+
+      if(response.status===403){
+        clearToken();
+        throw new Error("bridge_not_paired");
+      }
+
+      if(!response.ok){
+        throw new Error("HTTP "+response.status);
+      }
+
+      var data=await response.json();
+
+      if(!data || data.ok===false){
+        throw new Error(
+          data&&data.error
+            ? data.error
+            : "bad_bridge_response"
+        );
+      }
+
+      return data;
+
+    }finally{
+      clearTimeout(timeout);
+    }
+  }
+
+  window.OptiCoreBridge={
+    fetchDns:function(){
+      return requestReadOnlyEndpoint(
+        "/api/bridge-dns",
+        35000
+      );
+    },
+    isLinked:function(){
+      return linked &&
+        validToken(token);
+    }
+  };
+
   function schedule(){
     clearTimeout(timer);
 

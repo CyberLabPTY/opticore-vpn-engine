@@ -177,6 +177,10 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
       <div class="right"><b id="gp">-</b> ms<br><span id="gh">-</span> s</div>
     </div>
     <div class="row">
+      <div><strong>Control D · HaGeZi Pro</strong><small>Ping / DoH cifrado</small></div>
+      <div class="right"><b id="cdp">-</b> ms<br><span id="cdh">-</span> ms</div>
+    </div>
+    <div class="row">
       <div><strong>Selección automática</strong><small id="netAdvice">Necesita varias muestras antes de cambiar DNS.</small></div>
       <span class="tag">ANALISIS</span>
     </div>
@@ -215,7 +219,7 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
     </div>
     <div class="row">
       <div><strong>DNS</strong><small>No se cambia automáticamente hasta validar estabilidad y reversión.</small></div>
-      <button class="btn" id="dbtn">Criterio</button>
+      <button class="btn" id="dbtn">Escanear DNS</button>
     </div>
   </div>
 </section>
@@ -246,8 +250,10 @@ const FALLBACK={
   cloudflare_ping_ms:"N/D",
   quad9_ping_ms:"N/D",
   google_ping_ms:"N/D",
+  controld_hagezi_pro_ping_ms:"N/D",
   cloudflare_doh_seconds:"N/D",
   google_doh_seconds:"N/D",
+  controld_hagezi_pro_doh_ms:"N/D",
   camera_manual_sensor:0,
   camera_manual_processing:0,
   camera_raw:0,
@@ -299,8 +305,10 @@ function render(d,source){
   $("cfp").textContent=known(d.cloudflare_ping_ms)?d.cloudflare_ping_ms:"N/D";
   $("q9p").textContent=known(d.quad9_ping_ms)?d.quad9_ping_ms:"N/D";
   $("gp").textContent=known(d.google_ping_ms)?d.google_ping_ms:"N/D";
+  $("cdp").textContent=known(d.controld_hagezi_pro_ping_ms)?d.controld_hagezi_pro_ping_ms:"N/D";
   $("cfh").textContent=known(d.cloudflare_doh_seconds)?d.cloudflare_doh_seconds:"N/D";
   $("gh").textContent=known(d.google_doh_seconds)?d.google_doh_seconds:"N/D";
+  $("cdh").textContent=known(d.controld_hagezi_pro_doh_ms)?d.controld_hagezi_pro_doh_ms:"N/D";
 
   const caps=[];
   if(+d.camera_manual_sensor) caps.push("SENSOR");
@@ -324,7 +332,8 @@ function render(d,source){
   const samples=[
     ["Cloudflare",d.cloudflare_ping_ms],
     ["Quad9",d.quad9_ping_ms],
-    ["Google",d.google_ping_ms]
+    ["Google",d.google_ping_ms],
+    ["Control D · HaGeZi Pro",d.controld_hagezi_pro_ping_ms]
   ].filter(x=>known(x[1])).map(x=>[x[0],Number(x[1])]).filter(x=>Number.isFinite(x[1])).sort((a,b)=>a[1]-b[1]);
 
   $("netAdvice").textContent=samples[0]
@@ -395,8 +404,65 @@ $("cbtn").onclick=()=>{
   toast("Modo seguro: todavia no se ha borrado nada.");
 };
 
-$("dbtn").onclick=()=>{
-  toast("DNS automatico: multiples muestras, estabilidad y reversion.");
+$("dbtn").onclick=async()=>{
+  const btn=$("dbtn");
+  const original=btn.textContent;
+  btn.disabled=true;
+  btn.textContent="Escaneando…";
+
+  try{
+    let d;
+
+    if(LOCAL_ENGINE){
+      const r=await fetch("./api/dns?t="+Date.now(),{cache:"no-store"});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      d=await r.json();
+    }else if(window.OptiCoreBridge &&
+             typeof window.OptiCoreBridge.fetchDns==="function" &&
+             window.OptiCoreBridge.isLinked()){
+      d=await window.OptiCoreBridge.fetchDns();
+    }else{
+      toast("Enlaza OptiCore Android para medir DNS reales.");
+      return;
+    }
+
+    const cf=d.cloudflare||{};
+    const q9=d.quad9||{};
+    const gg=d.google||{};
+    const cd=d.controld_hagezi_pro||{};
+
+    DATA.cloudflare_ping_ms=cf.avg_ms||"N/D";
+    DATA.quad9_ping_ms=q9.avg_ms||"N/D";
+    DATA.google_ping_ms=gg.avg_ms||"N/D";
+    DATA.controld_hagezi_pro_ping_ms=cd.avg_ms||"N/D";
+    DATA.controld_hagezi_pro_doh_ms=
+      d.controld_hagezi_pro_doh_average_ms<9999
+        ? d.controld_hagezi_pro_doh_average_ms
+        : "N/D";
+
+    $("cfp").textContent=DATA.cloudflare_ping_ms;
+    $("q9p").textContent=DATA.quad9_ping_ms;
+    $("gp").textContent=DATA.google_ping_ms;
+    $("cdp").textContent=DATA.controld_hagezi_pro_ping_ms;
+    $("cdh").textContent=DATA.controld_hagezi_pro_doh_ms;
+
+    $("netAdvice").textContent=
+      "Mejor muestra actual: "+
+      (d.latency_stability_candidate||"N/D")+
+      ". DoH: "+
+      (d.doh_candidate||"N/D")+
+      (d.doh_candidate_ms<9999
+        ?" · "+d.doh_candidate_ms+" ms."
+        :".");
+
+    toast("Escaneo DNS completado sin cambiar tu configuración.");
+
+  }catch(e){
+    toast("No se pudo completar el escaneo DNS.");
+  }finally{
+    btn.disabled=false;
+    btn.textContent=original;
+  }
 };
 
 const savedMode=localStorage.getItem("dolCam");
@@ -717,4 +783,4 @@ setInterval(refresh,1000);window.addEventListener("focus",refresh);window.addEve
 })();
 </script>
 
-<script src="./bridge.js?v=1"></script>
+<script src="./bridge.js?v=2"></script>

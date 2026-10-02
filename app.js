@@ -176,15 +176,29 @@ async function refreshAll(){
 async function analyzeDns(){
   $('dnsBtn').disabled=true; $('dnsBtn').textContent='Analizando…';
   try{
-    if(!state.embedded){
-      setText('dnsCandidate','Usa DNS del sistema');
-      setText('dnsDetail','Desde una web no se puede medir ni cambiar de forma fiable el resolvedor DNS del sistema. La app Android puede comparar candidatos mediante pruebas locales.');
+    let d;
+    if(state.embedded){
+      d = await fetchJson('./api/dns',35000);
+    }else if(window.OptiCoreBridge &&
+             typeof window.OptiCoreBridge.fetchDns==='function' &&
+             window.OptiCoreBridge.isLinked()){
+      d = await window.OptiCoreBridge.fetchDns();
+    }else{
+      setText('dnsCandidate','Enlaza OptiCore Android');
+      setText('dnsDetail','La web pública necesita el puente seguro con la app para medir DNS reales desde el dispositivo.');
       return;
     }
-    const d = await fetchJson('./api/dns',25000);
     setText('dnsCandidate', d.latency_stability_candidate || d.doh_candidate || '—');
-    const c=d.cloudflare||{}, q=d.quad9||{}, g=d.google||{};
-    setText('dnsDetail','Cloudflare '+(c.avg_ms||'N/D')+' ms · Quad9 '+(q.avg_ms||'N/D')+' ms · Google '+(g.avg_ms||'N/D')+' ms. Candidato por latencia/estabilidad: '+(d.latency_stability_candidate||'—')+'.');
+    const c=d.cloudflare||{}, q=d.quad9||{}, g=d.google||{}, cd=d.controld_hagezi_pro||{};
+    const cdDoh=Number(d.controld_hagezi_pro_doh_average_ms);
+    setText('dnsDetail',
+      'Cloudflare '+(c.avg_ms||'N/D')+' ms · '+
+      'Quad9 '+(q.avg_ms||'N/D')+' ms · '+
+      'Google '+(g.avg_ms||'N/D')+' ms · '+
+      'Control D HaGeZi Pro '+(cd.avg_ms||'N/D')+' ms'+
+      (Number.isFinite(cdDoh)&&cdDoh<9999?' · DoH '+cdDoh+' ms':'')+
+      '. Mejor muestra: '+(d.latency_stability_candidate||'—')+
+      '. No se cambia el DNS automáticamente.');
   }catch(e){ setText('dnsDetail','No se pudo completar el análisis DNS en este momento.'); }
   finally{ $('dnsBtn').disabled=false; $('dnsBtn').textContent='Analizar DNS'; }
 }
