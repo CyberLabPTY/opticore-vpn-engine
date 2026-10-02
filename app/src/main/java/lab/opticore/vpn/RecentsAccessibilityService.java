@@ -488,7 +488,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                     r.width() < metrics.widthPixels * 0.99 &&
                     r.height() < metrics.heightPixels * 0.95) {
 
-                best.set(r);
+                return r;
             }
 
             current = current.getParent();
