@@ -99,7 +99,7 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
   <div class="heroTop">
     <div>
       <h2 id="model">Dispositivo</h2>
-      <p>Panel basado en mediciones reales. Las funciones bloqueadas por Android se muestran como protegidas.</p>
+      <p>Panel web público. Las mediciones Android reales requieren la app OptiCore instalada.</p>
     </div>
     <span class="tag" id="net">RED -</span>
   </div>
@@ -136,14 +136,14 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
     <h3>GPU</h3>
     <div class="value" id="gpu">-</div>
     <div class="note">Frecuencia actual / maxima. No representa porcentaje de uso.</div>
-    <span class="st ok">LECTURA REAL</span>
+    <span class="st warn">REQUIERE APP</span>
   </article>
 
   <article class="card">
     <h3>Batería</h3>
     <div class="value" id="temp">-</div>
     <div class="note">Temperatura reportada por el sensor.</div>
-    <span class="st ok">MONITOREO</span>
+    <span class="st warn">REQUIERE APP</span>
   </article>
 
   <article class="card">
@@ -411,7 +411,7 @@ loadJson();
 </script>
 <script src="./live.js?v=5"></script><script src="./smart-clean.js?v=5"></script><script src="./professional-ui.js?v=5"></script><script src="./cache-sync.js?v=5"></script><script src="./connection-guard.js?v=5"></script><script src="./resource-panel.js?v=4"></script><script src="./resource-summary.js?v=4"></script><section id="opticore-bridge-v1" style="margin:18px 0;padding:18px;border:1px solid rgba(72,213,202,.28);border-radius:18px;background:rgba(7,27,41,.86)">
 <div style="font-size:22px;font-weight:800;color:#eef7ff">Privacidad + OptiCore VPN</div>
-<div style="margin-top:7px;color:#9fb9c8;line-height:1.5">Estado externo de tu conexión y acceso directo al motor VPN Android.</div>
+<div style="margin-top:7px;color:#9fb9c8;line-height:1.5">Estado externo de tu conexión y acceso directo a la app OptiCore Android.</div>
 <div style="display:grid;gap:10px;margin-top:16px">
 <div style="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)"><div style="font-size:12px;color:#7f9aaa">IP pública actual</div><div id="opticorePublicIp" style="font-size:18px;font-weight:800;margin-top:4px">Comprobando...</div></div>
 <div style="padding:14px;border-radius:14px;background:rgba(13,38,56,.75)"><div style="font-size:12px;color:#7f9aaa">Salida de Internet</div><div id="opticoreLocation" style="font-size:16px;font-weight:700;margin-top:4px">Comprobando...</div></div>
@@ -489,7 +489,7 @@ refreshPrivacy();
 <script id="opticore-status-pro-v1-script">
 (function(){
 function fmt(total){total=Math.max(0,Number(total)||0);var h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=Math.floor(total%60);function p(n){return n<10?"0"+n:n}return h>0?h+":"+p(m)+":"+p(s):p(m)+":"+p(s)}
-function ensure(){var host=document.getElementById("opticore-bridge-v1");if(!host)return null;var box=document.getElementById("ocSecurityMonitor");if(box)return box;box=document.createElement("div");box.id="ocSecurityMonitor";box.className="oc-secmon";box.innerHTML="<div class=\"oc-sec-head\"><div id=\"ocMainPill\" class=\"oc-pill wait\"><span class=\"oc-dot\"></span><span id=\"ocMainText\">VERIFICANDO VPN</span></div><div class=\"oc-live\">LIVE</div></div><div class=\"oc-flow\"><div id=\"ocBars\" class=\"oc-bars idle\"><i></i><i></i><i></i><i></i><i></i></div><div class=\"oc-flow-main\"><div id=\"ocFlowTitle\" class=\"oc-flow-title\">Analizando túnel seguro</div><div id=\"ocFlowSub\" class=\"oc-flow-sub\">Esperando estado de OptiCore</div></div></div><div class=\"oc-sec-grid\"><div class=\"oc-mini\"><div class=\"oc-mini-k\">Estado del túnel</div><div id=\"ocTunnelPro\" class=\"oc-mini-v\">Comprobando...</div></div><div class=\"oc-mini\"><div class=\"oc-mini-k\">Sesión protegida</div><div id=\"ocSessionPro\" class=\"oc-mini-v\">--</div></div></div>";var grid=document.getElementById("opticoreNetwork");var anchor=grid&&grid.parentElement&&grid.parentElement.parentElement;if(anchor&&anchor.parentElement===host)host.insertBefore(box,anchor);else host.appendChild(box);return box}
+function ensure(){var host=document.getElementById("opticore-bridge-v1");if(!host)return null;var box=document.getElementById("ocSecurityMonitor");if(box)return box;box=document.createElement("div");box.id="ocSecurityMonitor";box.className="oc-secmon";box.innerHTML="<div class=\"oc-sec-head\"><div id=\"ocMainPill\" class=\"oc-pill wait\"><span class=\"oc-dot\"></span><span id=\"ocMainText\">VERIFICANDO VPN</span></div><div class=\"oc-live\">MODO WEB</div></div><div class=\"oc-flow\"><div id=\"ocBars\" class=\"oc-bars idle\"><i></i><i></i><i></i><i></i><i></i></div><div class=\"oc-flow-main\"><div id=\"ocFlowTitle\" class=\"oc-flow-title\">Analizando túnel seguro</div><div id=\"ocFlowSub\" class=\"oc-flow-sub\">Esperando estado de OptiCore</div></div></div><div class=\"oc-sec-grid\"><div class=\"oc-mini\"><div class=\"oc-mini-k\">Estado del túnel</div><div id=\"ocTunnelPro\" class=\"oc-mini-v\">Comprobando...</div></div><div class=\"oc-mini\"><div class=\"oc-mini-k\">Sesión protegida</div><div id=\"ocSessionPro\" class=\"oc-mini-v\">--</div></div></div>";var grid=document.getElementById("opticoreNetwork");var anchor=grid&&grid.parentElement&&grid.parentElement.parentElement;if(anchor&&anchor.parentElement===host)host.insertBefore(box,anchor);else host.appendChild(box);return box}
 function paint(mode,d){ensure();var pill=document.getElementById("ocMainPill"),txt=document.getElementById("ocMainText"),bars=document.getElementById("ocBars"),title=document.getElementById("ocFlowTitle"),sub=document.getElementById("ocFlowSub"),tun=document.getElementById("ocTunnelPro"),ses=document.getElementById("ocSessionPro");if(!pill)return;pill.className="oc-pill "+mode;if(mode==="on"){txt.textContent="VPN PROTEGIDA";bars.className="oc-bars";title.textContent="CANAL CIFRADO ACTIVO";sub.textContent=d&&d.endpoint?d.endpoint:"OptiCore VPN";tun.textContent="WireGuard conectado";ses.textContent=fmt(d&&d.connected_seconds)}else if(mode==="off"){txt.textContent="VPN DESCONECTADA";bars.className="oc-bars idle";title.textContent="TÚNEL INACTIVO";sub.textContent="El tráfico no está usando OptiCore VPN";tun.textContent="Desconectado";ses.textContent="00:00"}else if(mode==="web"){txt.textContent="MODO WEB PÚBLICO";bars.className="oc-bars idle";title.textContent="APP LOCAL NO ENLAZADA";sub.textContent="La VPN se administra y verifica dentro de OptiCore Android";tun.textContent="Requiere app";ses.textContent="--"}else if(mode==="na"){txt.textContent="APP LOCAL NO ENLAZADA";bars.className="oc-bars idle";title.textContent="TELEMETRÍA LOCAL NO DISPONIBLE";sub.textContent="Abre el panel local de OptiCore para ver el túnel";tun.textContent="No enlazada";ses.textContent="--"}else{txt.textContent="VERIFICANDO VPN";bars.className="oc-bars";title.textContent="ANALIZANDO TÚNEL";sub.textContent="Consultando OptiCore local";tun.textContent="Comprobando...";ses.textContent="--"}}
 async function refresh(){ensure();if(!navigator.onLine){paint("off");return}if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){paint("web");return}try{var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("http");var d=await r.json();paint(d.connected?"on":"off",d)}catch(e){paint("na")}}
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){ensure();refresh()})}else{ensure();refresh()}
@@ -535,7 +535,7 @@ var old=document.getElementById("qflowLiveV2");
 if(old)return old;
 var box=document.createElement("section");
 box.id="qflowLiveV2";
-box.innerHTML=`<div class="qf-head"><div class="qf-title">Q-FLOW LIVE TELEMETRY</div><div class="qf-real">WIREGUARD REAL</div></div><div class="qf-grid"><div class="qf-cell"><div class="qf-k">↓ DESCARGA RX</div><div id="qfRxRate" class="qf-v rx">0 B/s</div></div><div class="qf-cell"><div class="qf-k">↑ SUBIDA TX</div><div id="qfTxRate" class="qf-v tx">0 B/s</div></div><div class="qf-cell"><div class="qf-k">RX ACUMULADO</div><div id="qfRxTotal" class="qf-v">0 B</div></div><div class="qf-cell"><div class="qf-k">TX ACUMULADO</div><div id="qfTxTotal" class="qf-v">0 B</div></div></div><div class="qf-meter"><div class="qf-meter-head"><span>RX EWMA</span><span id="qfRxSmooth">0 B/s</span></div><div class="qf-track"><div id="qfRxFill" class="qf-fill"></div></div><div class="qf-meter-head" style="margin-top:10px"><span>TX EWMA</span><span id="qfTxSmooth">0 B/s</span></div><div class="qf-track"><div id="qfTxFill" class="qf-fill"></div></div></div><div class="qf-chart"><canvas id="qfCanvas"></canvas></div><div class="qf-foot"><span id="qfSamples">Esperando telemetría...</span><span id="qfActivity">Actividad --</span><span id="qfBurst" class="qf-burst">FLUJO ESTABLE</span></div>`;
+box.innerHTML=`<div class="qf-head"><div class="qf-title">Q-FLOW TELEMETRÍA</div><div class="qf-real">REQUIERE APP</div></div><div class="qf-grid"><div class="qf-cell"><div class="qf-k">↓ DESCARGA RX</div><div id="qfRxRate" class="qf-v rx">0 B/s</div></div><div class="qf-cell"><div class="qf-k">↑ SUBIDA TX</div><div id="qfTxRate" class="qf-v tx">0 B/s</div></div><div class="qf-cell"><div class="qf-k">RX ACUMULADO</div><div id="qfRxTotal" class="qf-v">0 B</div></div><div class="qf-cell"><div class="qf-k">TX ACUMULADO</div><div id="qfTxTotal" class="qf-v">0 B</div></div></div><div class="qf-meter"><div class="qf-meter-head"><span>RX EWMA</span><span id="qfRxSmooth">0 B/s</span></div><div class="qf-track"><div id="qfRxFill" class="qf-fill"></div></div><div class="qf-meter-head" style="margin-top:10px"><span>TX EWMA</span><span id="qfTxSmooth">0 B/s</span></div><div class="qf-track"><div id="qfTxFill" class="qf-fill"></div></div></div><div class="qf-chart"><canvas id="qfCanvas"></canvas></div><div class="qf-foot"><span id="qfSamples">Esperando telemetría...</span><span id="qfActivity">Actividad --</span><span id="qfBurst" class="qf-burst">FLUJO ESTABLE</span></div>`;
 host.appendChild(box);
 return box;
 }
