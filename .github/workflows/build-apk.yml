@@ -21,6 +21,7 @@ on:
       - opticore-open-apps-fix-v032
       - opticore-recents-event-fix-v033
       - opticore-smart-fluency-v035
+      - opticore-final-v036
 
 jobs:
   build:
