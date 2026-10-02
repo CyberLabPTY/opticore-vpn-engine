@@ -18,7 +18,6 @@ import android.util.DisplayMetrics;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.view.accessibility.AccessibilityWindowInfo;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -41,12 +40,6 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
     private static volatile RecentsAccessibilityService instance;
 
-    private final Object recentCaptureLock = new Object();
-    private final LinkedHashMap<String, JSONObject> recentEventApps =
-            new LinkedHashMap<>();
-    private volatile boolean recentCaptureActive = false;
-    private volatile long lastRecentCaptureAt = 0L;
-
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
@@ -55,27 +48,8 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        // OptiCore does not keep a browsing history. During an explicit
-        // Recents scan only, collect app labels exposed by Android's
-        // accessibility events. This is important on Samsung/One UI where
-        // the Recents tree may be populated through content-change events
-        // before getRootInActiveWindow() exposes the complete card list.
-        if (!recentCaptureActive || event == null) return;
-
-        long now = System.currentTimeMillis();
-        if (now - lastRecentCaptureAt < 90L) return;
-        lastRecentCaptureAt = now;
-
-        try {
-            AccessibilityNodeInfo source = event.getSource();
-            captureRecentAppsFromNode(source);
-
-            AccessibilityNodeInfo root = getRootInActiveWindow();
-            if (root != source) {
-                captureRecentAppsFromNode(root);
-            }
-        } catch (Throwable ignored) {
-        }
+        // OptiCore does not record user content. The service is used only
+        // when the user requests a scan/close action from the local panel.
     }
 
     @Override
@@ -121,42 +95,22 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             }
 
             RecentsAccessibilityService service = instance;
-            service.beginRecentCapture();
 
-            JSONArray apps = new JSONArray();
-
-            try {
-                if (!service.performGlobalActionSync(GLOBAL_ACTION_RECENTS)) {
-                    out.put("ok", false);
-                    out.put("reason", "could_not_open_recents");
-                    out.put("apps", new JSONArray());
-                    return out;
-                }
-
-                // Give One UI time to publish the Recents window and its
-                // TYPE_WINDOW_CONTENT_CHANGED events.
-                sleepQuietly(1000L);
-
-                apps =
-                        service.collectRecentCardsFromVisibleWindows(context);
-
-                service.mergeEventCapturedApps(apps);
-
-                // A second pass catches cards that One UI lazily inflates
-                // after the first horizontal/visual Recents layout settles.
-                if (apps.length() == 0) {
-                    sleepQuietly(650L);
-                    apps =
-                            service.collectRecentCardsFromVisibleWindows(context);
-                    service.mergeEventCapturedApps(apps);
-                }
-            } finally {
-                service.endRecentCapture();
-
-                // Return explicitly to the OptiCore panel instead of leaving
-                // the user in Android Recents or a previous Settings screen.
-                service.returnToCallerSoon(220L);
+            if (!service.performGlobalActionSync(GLOBAL_ACTION_RECENTS)) {
+                out.put("ok", false);
+                out.put("reason", "could_not_open_recents");
+                out.put("apps", new JSONArray());
+                return out;
             }
+
+            sleepQuietly(800L);
+
+            AccessibilityNodeInfo root = service.getRootInActiveWindow();
+            JSONArray apps = service.collectRecentCards(context, root);
+
+            // Return explicitly to the OptiCore panel instead of leaving
+            // the user in Android Recents or a previous Settings screen.
+            service.returnToCallerSoon(260L);
 
             out.put("ok", true);
             out.put("apps", apps);
@@ -240,8 +194,8 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                     continue;
                 }
 
-                AccessibilityNodeInfo node =
-                        service.findNodeForLabelAcrossVisibleWindows(label);
+                AccessibilityNodeInfo root = service.getRootInActiveWindow();
+                AccessibilityNodeInfo node = service.findNodeForLabel(root, label);
 
                 if (node == null) {
                     JSONObject item = new JSONObject();
@@ -290,154 +244,6 @@ public final class RecentsAccessibilityService extends AccessibilityService {
         return out;
     }
 
-    private void beginRecentCapture() {
-        synchronized (recentCaptureLock) {
-            recentEventApps.clear();
-            recentCaptureActive = true;
-            lastRecentCaptureAt = 0L;
-        }
-    }
-
-    private void endRecentCapture() {
-        recentCaptureActive = false;
-    }
-
-    private void captureRecentAppsFromNode(
-            AccessibilityNodeInfo node) {
-
-        if (node == null || !recentCaptureActive) return;
-
-        try {
-            JSONArray apps =
-                    collectRecentCards(
-                            getApplicationContext(),
-                            node);
-
-            synchronized (recentCaptureLock) {
-                mergeRecentApps(
-                        recentEventApps,
-                        apps);
-            }
-        } catch (Throwable ignored) {
-        }
-    }
-
-    private void mergeEventCapturedApps(
-            JSONArray destination) throws Exception {
-
-        LinkedHashMap<String, JSONObject> merged =
-                new LinkedHashMap<>();
-
-        mergeRecentApps(
-                merged,
-                destination);
-
-        synchronized (recentCaptureLock) {
-            for (JSONObject item :
-                    recentEventApps.values()) {
-
-                JSONArray one =
-                        new JSONArray();
-
-                one.put(item);
-
-                mergeRecentApps(
-                        merged,
-                        one);
-            }
-        }
-
-        while (destination.length() > 0) {
-            destination.remove(
-                    destination.length() - 1);
-        }
-
-        for (JSONObject item :
-                merged.values()) {
-
-            destination.put(item);
-        }
-    }
-
-    private JSONArray collectRecentCardsFromVisibleWindows(
-            Context context) throws Exception {
-
-        LinkedHashMap<String, JSONObject> merged =
-                new LinkedHashMap<>();
-
-        mergeRecentApps(
-                merged,
-                collectRecentCards(
-                        context,
-                        getRootInActiveWindow()));
-
-        try {
-            List<AccessibilityWindowInfo> windows = getWindows();
-
-            if (windows != null) {
-                for (AccessibilityWindowInfo window : windows) {
-                    if (window == null) continue;
-
-                    AccessibilityNodeInfo root = null;
-
-                    try {
-                        root = window.getRoot();
-                    } catch (Throwable ignored) {
-                    }
-
-                    if (root == null) continue;
-
-                    mergeRecentApps(
-                            merged,
-                            collectRecentCards(
-                                    context,
-                                    root));
-                }
-            }
-        } catch (Throwable ignored) {
-        }
-
-        JSONArray out = new JSONArray();
-
-        for (JSONObject item : merged.values()) {
-            out.put(item);
-        }
-
-        return out;
-    }
-
-    private static void mergeRecentApps(
-            LinkedHashMap<String, JSONObject> merged,
-            JSONArray apps) throws Exception {
-
-        if (apps == null) return;
-
-        for (int i = 0; i < apps.length(); i++) {
-            JSONObject item = apps.optJSONObject(i);
-            if (item == null) continue;
-
-            String pkg =
-                    item.optString("package", "").trim();
-
-            String label =
-                    item.optString("label", "").trim();
-
-            String key =
-                    !pkg.isEmpty()
-                            ? pkg
-                            : label.toLowerCase(Locale.ROOT);
-
-            if (key.isEmpty() ||
-                    merged.containsKey(key)) {
-                continue;
-            }
-
-            merged.put(
-                    key,
-                    item);
-        }
-    }
-
     private JSONArray collectRecentCards(
             Context context,
             AccessibilityNodeInfo root) throws Exception {
@@ -458,8 +264,10 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             visited++;
 
             AppRef match = matchNode(node, knownApps);
+            String nodePackage = node.getPackageName() == null ? "" : node.getPackageName().toString();
+            boolean recentsUiNode = nodePackage.equals("com.android.systemui") || nodePackage.toLowerCase(Locale.ROOT).contains("launcher");
 
-            if (match != null &&
+            if (match != null && recentsUiNode &&
                     !isProtectedPackage(context, match.packageName) &&
                     !matches.containsKey(match.packageName.isEmpty()
                             ? match.label.toLowerCase(Locale.ROOT)
@@ -604,54 +412,10 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
             if (label.length() < 2) continue;
 
-            if (candidate.equals(label) ||
-                    candidate.startsWith(label + " ") ||
-                    candidate.startsWith(label + ",") ||
-                    candidate.startsWith(label + ".") ||
-                    candidate.startsWith(label + " -")) {
+            if (candidate.equals(label)) {
 
                 return ref;
             }
-        }
-
-        return null;
-    }
-
-    private AccessibilityNodeInfo findNodeForLabelAcrossVisibleWindows(
-            String targetLabel) {
-
-        AccessibilityNodeInfo node =
-                findNodeForLabel(
-                        getRootInActiveWindow(),
-                        targetLabel);
-
-        if (node != null) return node;
-
-        try {
-            List<AccessibilityWindowInfo> windows = getWindows();
-
-            if (windows != null) {
-                for (AccessibilityWindowInfo window : windows) {
-                    if (window == null) continue;
-
-                    AccessibilityNodeInfo root = null;
-
-                    try {
-                        root = window.getRoot();
-                    } catch (Throwable ignored) {
-                    }
-
-                    if (root == null) continue;
-
-                    node =
-                            findNodeForLabel(
-                                    root,
-                                    targetLabel);
-
-                    if (node != null) return node;
-                }
-            }
-        } catch (Throwable ignored) {
         }
 
         return null;
@@ -703,11 +467,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
         if (candidate.isEmpty() || wanted.isEmpty()) return false;
 
-        return candidate.equals(wanted) ||
-                candidate.startsWith(wanted + " ") ||
-                candidate.startsWith(wanted + ",") ||
-                candidate.startsWith(wanted + ".") ||
-                candidate.startsWith(wanted + " -");
+        return candidate.equals(wanted);
     }
 
     private Rect findCardBounds(AccessibilityNodeInfo node) {
