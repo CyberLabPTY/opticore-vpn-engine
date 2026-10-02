@@ -81,7 +81,41 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
   .row .right{max-width:48%}
   .mode{padding:10px 12px}
 }
-</style><link rel="stylesheet" href="/professional-ui.css?v=3"><link id="oc-favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%2307131d%22/%3E%3Cpath d=%22M32 7 51 15v14c0 13-8 23-19 28-11-5-19-15-19-28V15z%22 fill=%22none%22 stroke=%22%2353dfcf%22 stroke-width=%224%22/%3E%3Cpath d=%22M21 31h8l4-10 5 22 4-12h7%22 fill=%22none%22 stroke=%22%235bc0eb%22 stroke-width=%224%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E"><title>OptiCore Lab | Diagnóstico y Optimización Android</title><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icon-192.svg"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script defer src="/pwa-install.js?v=3"></script></head>
+</style><link rel="stylesheet" href="/professional-ui.css?v=3"><link id="oc-favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%2307131d%22/%3E%3Cpath d=%22M32 7 51 15v14c0 13-8 23-19 28-11-5-19-15-19-28V15z%22 fill=%22none%22 stroke=%22%2353dfcf%22 stroke-width=%224%22/%3E%3Cpath d=%22M21 31h8l4-10 5 22 4-12h7%22 fill=%22none%22 stroke=%22%235bc0eb%22 stroke-width=%224%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E"><title>OptiCore Lab | Diagnóstico y Optimización Android</title><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icon-192.svg"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script defer src="/pwa-install.js?v=3"></script>
+<style id="optimization-actions-v025">
+.optimization-action-row{align-items:center}
+.optimization-action-btn{
+  width:168px;
+  min-width:168px;
+  min-height:58px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  line-height:1.18;
+  font-weight:650;
+}
+@media(max-width:700px){
+  .optimization-action-row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:11px;
+    justify-items:center;
+    padding-top:14px;
+    padding-bottom:14px;
+  }
+  .optimization-action-row>div:first-child{
+    width:100%;
+    text-align:left;
+  }
+  .optimization-action-btn{
+    width:min(220px,100%);
+    min-width:0;
+    margin:0 auto;
+  }
+}
+</style>
+</head>
 <body>
 <main class="wrap">
 <header class="top">
@@ -205,17 +239,17 @@ footer{text-align:center;color:#61788b;font-size:9px;margin-top:22px}
       <div><strong>Smart Boost + batería</strong><small>RAM antes/después, liberación equilibrada o intensiva, actividad reciente y diagnóstico de batería.</small></div>
       <a class="btn primary" href="./optimizer-pro.html" style="text-decoration:none;text-align:center">Abrir Optimización Pro</a>
     </div>
-    <div class="row">
+    <div class="row optimization-action-row">
       <div><strong>RAM / CPU</strong><small id="ramAdvice">-</small></div>
-      <button class="btn" id="rbtn">Diagnóstico</button>
+      <button class="btn optimization-action-btn" id="rbtn">Diagnóstico</button>
     </div>
-    <div class="row">
+    <div class="row optimization-action-row">
       <div><strong>Cache</strong><small id="cacheAdvice">-</small></div>
-      <button class="btn" id="cbtn">Preparar limpieza</button>
+      <button class="btn optimization-action-btn" id="cbtn">Preparar limpieza</button>
     </div>
-    <div class="row">
+    <div class="row optimization-action-row">
       <div><strong>DNS</strong><small>No se cambia automáticamente hasta validar estabilidad y reversión.</small></div>
-      <button class="btn" id="dbtn">Criterio</button>
+      <button class="btn optimization-action-btn" id="dbtn">Criterio</button>
     </div>
   </div>
 </section>
