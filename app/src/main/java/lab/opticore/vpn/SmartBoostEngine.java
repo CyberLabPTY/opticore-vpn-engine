@@ -27,6 +27,10 @@ import java.util.Set;
 
 public final class SmartBoostEngine {
 
+    private static final double PRESSURE_CRITICAL = 18.0;
+    private static final double PRESSURE_TIGHT = 32.0;
+    private static final double HEALTHY_RAM = 38.0;
+
     private SmartBoostEngine() {}
 
     public static JSONObject scan(Context context) {
@@ -52,7 +56,10 @@ public final class SmartBoostEngine {
             out.put("ram_total_mb", round1(memory.totalBytes / 1048576.0));
             out.put("ram_available_mb", round1(memory.availableBytes / 1048576.0));
             out.put("ram_available_percent", round1(memory.availablePercent));
+            out.put("ram_threshold_mb", round1(memory.thresholdBytes / 1048576.0));
             out.put("ram_low", memory.lowMemory);
+            out.put("pressure", pressureLevel(memory));
+            out.put("recommended_mode", recommendedMode(memory));
             out.put("candidate_count", candidates.length());
             out.put("candidates", candidates);
             out.put("usage_access", hasUsageAccess(context));
@@ -79,6 +86,12 @@ public final class SmartBoostEngine {
             ActivityManager am =
                     (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
 
+            if (am == null) {
+                out.put("ok", false);
+                out.put("reason", "activity_manager_unavailable");
+                return out;
+            }
+
             Memory before = readMemory(am);
 
             if (Build.VERSION.SDK_INT >= 34) {
@@ -90,17 +103,75 @@ public final class SmartBoostEngine {
                 return out;
             }
 
-            Set<String> packages =
+            if (!aggressive &&
+                    !before.lowMemory &&
+                    before.availablePercent >= HEALTHY_RAM) {
+
+                out.put("ok", true);
+                out.put("engine", "smart_fluency_v035");
+                out.put("mode", "balanced");
+                out.put("smart_skip", true);
+                out.put("pass_count", 0);
+                out.put("attempted_count", 0);
+                out.put("attempted_packages", new JSONArray());
+                out.put("ram_before_mb", round1(before.availableBytes / 1048576.0));
+                out.put("ram_after_mb", round1(before.availableBytes / 1048576.0));
+                out.put("ram_before_percent", round1(before.availablePercent));
+                out.put("ram_after_percent", round1(before.availablePercent));
+                out.put("measured_delta_mb", 0.0);
+                out.put("measured_freed_mb", 0.0);
+                out.put("ram_low_before", before.lowMemory);
+                out.put("ram_low_after", before.lowMemory);
+                out.put("pressure_before", pressureLevel(before));
+                out.put("pressure_after", pressureLevel(before));
+                out.put("second_pass_used", false);
+                out.put(
+                        "note",
+                        "RAM suficiente. OptiCore evita cerrar procesos innecesariamente para conservar fluidez.");
+                return out;
+            }
+
+            LinkedHashSet<String> allAttempted = new LinkedHashSet<>();
+            int passCount = 0;
+
+            Set<String> first =
                     runningUserPackages(context, am, aggressive);
 
-            JSONArray attempted = new JSONArray();
+            int firstAttempts =
+                    releasePackages(
+                            am,
+                            first,
+                            aggressive ? 14 : 8,
+                            allAttempted);
 
-            for (String pkg : packages) {
-                try {
-                    am.killBackgroundProcesses(pkg);
-                    attempted.put(pkg);
-                } catch (Throwable ignored) {
+            if (firstAttempts > 0) {
+                passCount++;
+            }
+
+            sleepQuietly(900L);
+
+            Memory middle = readMemory(am);
+
+            boolean secondPassNeeded =
+                    middle.lowMemory ||
+                    middle.availablePercent < 25.0;
+
+            if (secondPassNeeded) {
+                Set<String> second =
+                        runningUserPackages(context, am, true);
+
+                int secondAttempts =
+                        releasePackages(
+                                am,
+                                second,
+                                10,
+                                allAttempted);
+
+                if (secondAttempts > 0) {
+                    passCount++;
                 }
+
+                sleepQuietly(900L);
             }
 
             try {
@@ -108,18 +179,23 @@ public final class SmartBoostEngine {
             } catch (Throwable ignored) {
             }
 
-            try {
-                Thread.sleep(1200L);
-            } catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
-            }
+            sleepQuietly(500L);
 
             Memory after = readMemory(am);
             long delta = after.availableBytes - before.availableBytes;
 
+            JSONArray attempted = new JSONArray();
+
+            for (String pkg : allAttempted) {
+                attempted.put(pkg);
+            }
+
             out.put("ok", true);
+            out.put("engine", "smart_fluency_v035");
             out.put("mode", aggressive ? "aggressive" : "balanced");
             out.put("android_sdk", Build.VERSION.SDK_INT);
+            out.put("smart_skip", false);
+            out.put("pass_count", passCount);
             out.put("attempted_count", attempted.length());
             out.put("attempted_packages", attempted);
             out.put("ram_before_mb", round1(before.availableBytes / 1048576.0));
@@ -130,9 +206,12 @@ public final class SmartBoostEngine {
             out.put("measured_freed_mb", round1(Math.max(0L, delta) / 1048576.0));
             out.put("ram_low_before", before.lowMemory);
             out.put("ram_low_after", after.lowMemory);
+            out.put("pressure_before", pressureLevel(before));
+            out.put("pressure_after", pressureLevel(after));
+            out.put("second_pass_used", secondPassNeeded);
             out.put(
                     "note",
-                    "The result is measured from Android memory counters. Attempted package kills are not claimed as successful unless RAM counters changed.");
+                    "OptiCore prioriza procesos de usuario en segundo plano, mide la RAM real antes y despues y solo usa una segunda pasada si persiste la presion de memoria.");
 
         } catch (Throwable e) {
             putError(out, e);
@@ -269,6 +348,78 @@ public final class SmartBoostEngine {
         return out;
     }
 
+    private static int releasePackages(
+            ActivityManager am,
+            Set<String> packages,
+            int limit,
+            Set<String> allAttempted) {
+
+        int attempts = 0;
+
+        if (am == null || packages == null || packages.isEmpty()) {
+            return attempts;
+        }
+
+        for (String pkg : packages) {
+            if (attempts >= limit) {
+                break;
+            }
+
+            if (pkg == null || pkg.isEmpty() || allAttempted.contains(pkg)) {
+                continue;
+            }
+
+            try {
+                am.killBackgroundProcesses(pkg);
+                allAttempted.add(pkg);
+                attempts++;
+            } catch (Throwable ignored) {
+            }
+
+            sleepQuietly(60L);
+        }
+
+        return attempts;
+    }
+
+    private static String pressureLevel(Memory memory) {
+        if (memory == null) {
+            return "unknown";
+        }
+
+        if (memory.lowMemory || memory.availablePercent < PRESSURE_CRITICAL) {
+            return "critical";
+        }
+
+        if (memory.availablePercent < PRESSURE_TIGHT) {
+            return "tight";
+        }
+
+        return "comfortable";
+    }
+
+    private static String recommendedMode(Memory memory) {
+        String pressure = pressureLevel(memory);
+
+        if ("critical".equals(pressure)) {
+            return "aggressive";
+        }
+
+        if ("tight".equals(pressure)) {
+            return "balanced";
+        }
+
+        return "none";
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     private static Set<String> runningUserPackages(
             Context context,
             ActivityManager am,
@@ -312,6 +463,10 @@ public final class SmartBoostEngine {
         out.add(context.getPackageName());
         out.add("android");
         out.add("com.android.systemui");
+        out.add("com.android.chrome");
+        out.add("com.sec.android.app.sbrowser");
+        out.add("com.android.phone");
+        out.add("com.samsung.android.incallui");
 
         try {
             Intent home = new Intent(Intent.ACTION_MAIN);
@@ -398,6 +553,7 @@ public final class SmartBoostEngine {
         Memory out = new Memory();
         out.totalBytes = Math.max(0L, info.totalMem);
         out.availableBytes = Math.max(0L, info.availMem);
+        out.thresholdBytes = Math.max(0L, info.threshold);
         out.lowMemory = info.lowMemory;
         out.availablePercent =
                 out.totalBytes > 0
@@ -423,6 +579,7 @@ public final class SmartBoostEngine {
     private static final class Memory {
         long totalBytes;
         long availableBytes;
+        long thresholdBytes;
         double availablePercent;
         boolean lowMemory;
     }
