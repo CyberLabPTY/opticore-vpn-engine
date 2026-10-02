@@ -1,4 +1,4 @@
-const CACHE="opticore-pwa-v13-pages";
+const CACHE="opticore-pwa-v14-pages";
 const ROOT=new URL("./",self.location.href).href;
 const INDEX=new URL("./index.html",self.location.href).href;
 const STATIC=[
@@ -14,6 +14,7 @@ const STATIC=[
   new URL("./resource-summary.js",self.location.href).href,
   new URL("./manifest.webmanifest",self.location.href).href,
   new URL("./pwa-install.js",self.location.href).href,
+  new URL("./bridge.js",self.location.href).href,
   new URL("./icon-192.svg",self.location.href).href,
   new URL("./icon-512.svg",self.location.href).href,
   new URL("./camera-lab-pro.html",self.location.href).href,

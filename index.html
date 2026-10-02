@@ -491,7 +491,7 @@ refreshPrivacy();
 function fmt(total){total=Math.max(0,Number(total)||0);var h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=Math.floor(total%60);function p(n){return n<10?"0"+n:n}return h>0?h+":"+p(m)+":"+p(s):p(m)+":"+p(s)}
 function ensure(){var host=document.getElementById("opticore-bridge-v1");if(!host)return null;var box=document.getElementById("ocSecurityMonitor");if(box)return box;box=document.createElement("div");box.id="ocSecurityMonitor";box.className="oc-secmon";box.innerHTML="<div class=\"oc-sec-head\"><div id=\"ocMainPill\" class=\"oc-pill wait\"><span class=\"oc-dot\"></span><span id=\"ocMainText\">VERIFICANDO VPN</span></div><div class=\"oc-live\">MODO WEB</div></div><div class=\"oc-flow\"><div id=\"ocBars\" class=\"oc-bars idle\"><i></i><i></i><i></i><i></i><i></i></div><div class=\"oc-flow-main\"><div id=\"ocFlowTitle\" class=\"oc-flow-title\">Analizando túnel seguro</div><div id=\"ocFlowSub\" class=\"oc-flow-sub\">Esperando estado de OptiCore</div></div></div><div class=\"oc-sec-grid\"><div class=\"oc-mini\"><div class=\"oc-mini-k\">Estado del túnel</div><div id=\"ocTunnelPro\" class=\"oc-mini-v\">Comprobando...</div></div><div class=\"oc-mini\"><div class=\"oc-mini-k\">Sesión protegida</div><div id=\"ocSessionPro\" class=\"oc-mini-v\">--</div></div></div>";var grid=document.getElementById("opticoreNetwork");var anchor=grid&&grid.parentElement&&grid.parentElement.parentElement;if(anchor&&anchor.parentElement===host)host.insertBefore(box,anchor);else host.appendChild(box);return box}
 function paint(mode,d){ensure();var pill=document.getElementById("ocMainPill"),txt=document.getElementById("ocMainText"),bars=document.getElementById("ocBars"),title=document.getElementById("ocFlowTitle"),sub=document.getElementById("ocFlowSub"),tun=document.getElementById("ocTunnelPro"),ses=document.getElementById("ocSessionPro");if(!pill)return;pill.className="oc-pill "+mode;if(mode==="on"){txt.textContent="VPN PROTEGIDA";bars.className="oc-bars";title.textContent="CANAL CIFRADO ACTIVO";sub.textContent=d&&d.endpoint?d.endpoint:"OptiCore VPN";tun.textContent="WireGuard conectado";ses.textContent=fmt(d&&d.connected_seconds)}else if(mode==="off"){txt.textContent="VPN DESCONECTADA";bars.className="oc-bars idle";title.textContent="TÚNEL INACTIVO";sub.textContent="El tráfico no está usando OptiCore VPN";tun.textContent="Desconectado";ses.textContent="00:00"}else if(mode==="web"){txt.textContent="MODO WEB PÚBLICO";bars.className="oc-bars idle";title.textContent="APP LOCAL NO ENLAZADA";sub.textContent="La VPN se administra y verifica dentro de OptiCore Android";tun.textContent="Requiere app";ses.textContent="--"}else if(mode==="na"){txt.textContent="APP LOCAL NO ENLAZADA";bars.className="oc-bars idle";title.textContent="TELEMETRÍA LOCAL NO DISPONIBLE";sub.textContent="Abre el panel local de OptiCore para ver el túnel";tun.textContent="No enlazada";ses.textContent="--"}else{txt.textContent="VERIFICANDO VPN";bars.className="oc-bars";title.textContent="ANALIZANDO TÚNEL";sub.textContent="Consultando OptiCore local";tun.textContent="Comprobando...";ses.textContent="--"}}
-async function refresh(){ensure();if(!navigator.onLine){paint("off");return}if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){paint("web");return}try{var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("http");var d=await r.json();paint(d.connected?"on":"off",d)}catch(e){paint("na")}}
+async function refresh(){ensure();if(!navigator.onLine){paint("off");return}if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){var bd=window.__OPTICORE_BRIDGE_DATA__;if(bd&&bd.ok===true){paint(bd.vpn_connected?"on":"off",{connected_seconds:bd.vpn_connected_seconds||0,endpoint:"OptiCore Android"});var live=document.querySelector("#ocSecurityMonitor .oc-live");if(live)live.textContent="ENLAZADO"}else{paint("web")}return}try{var r=await fetch("http://127.0.0.1:8767/status?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("http");var d=await r.json();paint(d.connected?"on":"off",d)}catch(e){paint("na")}}
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){ensure();refresh()})}else{ensure();refresh()}
 setInterval(refresh,3000);window.addEventListener("focus",refresh);window.addEventListener("online",refresh);window.addEventListener("offline",refresh);
 })();
@@ -556,7 +556,15 @@ function setText(id,value){var e=document.getElementById(id);if(e)e.textContent=
 async function refresh(){
 if(!ensure())return;
 if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){
-setText("qfRxRate","--");setText("qfTxRate","--");setText("qfRxTotal","--");setText("qfTxTotal","--");setText("qfRxSmooth","--");setText("qfTxSmooth","--");setText("qfSamples","Telemetría disponible en el panel local de OptiCore");setText("qfActivity","Actividad --");var b=document.getElementById("qfBurst");if(b){b.className="qf-burst";b.textContent="REQUIERE APP"}return;
+var bd=window.__OPTICORE_BRIDGE_DATA__;
+if(bd&&bd.ok===true){
+var rx=num(bd.vpn_rx_bps),tx=num(bd.vpn_tx_bps),rxs=num(bd.vpn_rx_ewma_bps),txs=num(bd.vpn_tx_ewma_bps);
+setText("qfRxRate",fmtRate(rx));setText("qfTxRate",fmtRate(tx));setText("qfRxTotal",fmtBytes(bd.vpn_rx_bytes));setText("qfTxTotal",fmtBytes(bd.vpn_tx_bytes));setText("qfRxSmooth",fmtRate(rxs));setText("qfTxSmooth",fmtRate(txs));
+var rxFill=document.getElementById("qfRxFill"),txFill=document.getElementById("qfTxFill");if(rxFill)rxFill.style.width=activityIndex(rxs)+"%";if(txFill)txFill.style.width=activityIndex(txs)+"%";
+var b=document.getElementById("qfBurst");if(b){b.className="qf-burst"+(bd.vpn_burst?" hot":"");b.textContent=bd.vpn_burst?"RÁFAGA":"FLUJO ESTABLE"}
+setText("qfSamples","OptiCore "+(bd.version||"")+" · "+(bd.vpn_connected?"Túnel activo":"Túnel inactivo"));setText("qfActivity",bd.vpn_connected?"VPN activa":"VPN inactiva");var qr=document.querySelector("#qflowLiveV2 .qf-real");if(qr)qr.textContent="WIREGUARD ENLAZADO";return;
+}
+setText("qfRxRate","--");setText("qfTxRate","--");setText("qfRxTotal","--");setText("qfTxTotal","--");setText("qfRxSmooth","--");setText("qfTxSmooth","--");setText("qfSamples","Telemetría disponible al enlazar OptiCore Android");setText("qfActivity","Actividad --");var b=document.getElementById("qfBurst");if(b){b.className="qf-burst";b.textContent="REQUIERE APP"}return;
 }
 try{
 var r=await fetch(API+"?qflow="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);var d=await r.json();
@@ -628,12 +636,22 @@ setInterval(refresh,1000);window.addEventListener("focus",refresh);window.addEve
 
   async function readOptiCore(){
     if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){
-      vpn.textContent="APP LOCAL NO ENLAZADA";
-      endpoint.textContent="Disponible en OptiCore Android";
-      config.textContent="Requiere app";
-      duration.textContent="--";
-      version.textContent="Web pública";
-      net.textContent=navigator.onLine?"INTERNET ACTIVO · MODO WEB":"SIN CONEXIÓN";
+      var bd=window.__OPTICORE_BRIDGE_DATA__;
+      if(bd&&bd.ok===true){
+        vpn.textContent=bd.vpn_connected?"PROTECCIÓN ACTIVA":"DESCONECTADA";
+        endpoint.textContent="Motor Android enlazado";
+        config.textContent="ENLACE SEGURO";
+        duration.textContent=bd.vpn_connected?formatTime(bd.vpn_connected_seconds):"00:00";
+        version.textContent=bd.version||"--";
+        net.textContent=navigator.onLine?(bd.vpn_connected?"INTERNET + VPN ACTIVOS":"INTERNET ACTIVO · VPN DESCONECTADA"):"SIN CONEXIÓN";
+      }else{
+        vpn.textContent="APP LOCAL NO ENLAZADA";
+        endpoint.textContent="Disponible en OptiCore Android";
+        config.textContent="Requiere app";
+        duration.textContent="--";
+        version.textContent="Web pública";
+        net.textContent=navigator.onLine?"INTERNET ACTIVO · MODO WEB":"SIN CONEXIÓN";
+      }
       return;
     }
     try{
@@ -698,3 +716,5 @@ setInterval(refresh,1000);window.addEventListener("focus",refresh);window.addEve
   setInterval(readOptiCore,5000);
 })();
 </script>
+
+<script src="./bridge.js?v=1"></script>
