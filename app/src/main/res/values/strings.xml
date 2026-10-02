@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OptiCore VPN Engine</string>
+    <string name="accessibility_service_description">Permite a OptiCore detectar tarjetas visibles de Aplicaciones recientes y cerrarlas mediante un gesto únicamente cuando el usuario lo solicita.</string>
 </resources>
