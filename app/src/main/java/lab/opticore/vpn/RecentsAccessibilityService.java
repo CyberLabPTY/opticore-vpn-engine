@@ -10,7 +10,6 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Path;
 import android.graphics.Rect;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
@@ -40,7 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class RecentsAccessibilityService extends AccessibilityService {
 
     private static volatile RecentsAccessibilityService instance;
-    private static final String PANEL_URI = "http://127.0.0.1:8766/optimizer-pro.html#open-apps";
 
     @Override
     protected void onServiceConnected() {
@@ -112,7 +110,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
             // Return explicitly to the OptiCore panel instead of leaving
             // the user in Android Recents or a previous Settings screen.
-            service.returnToPanelSoon(220L);
+            service.returnToCallerSoon(260L);
 
             out.put("ok", true);
             out.put("apps", apps);
@@ -122,7 +120,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
                     "Android Recents accessibility tree; only cards currently exposed by Android are returned.");
             out.put(
                     "note",
-                    "This is different from usage history. Android may expose only the currently loaded Recent-app cards. OptiCore returns to the local panel automatically after scanning.");
+                    "This is different from usage history. Android may expose only the currently loaded Recent-app cards. OptiCore returns to the exact screen that launched the scan, so the pending panel request can render its result in the same tab.");
 
         } catch (Throwable e) {
             putError(out, e);
@@ -225,7 +223,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
 
             // Return explicitly to the OptiCore panel after the requested
             // swipe-close gestures complete.
-            service.returnToPanelSoon(260L);
+            service.returnToCallerSoon(320L);
 
             out.put("ok", true);
             out.put("requested_count", limit);
@@ -237,7 +235,7 @@ public final class RecentsAccessibilityService extends AccessibilityService {
             out.put("protected", protectedApps);
             out.put(
                     "note",
-                    "A close is counted only when the accessibility swipe gesture was accepted by Android. The Recent-app UI can vary by manufacturer. OptiCore returns to the local panel automatically after the close action.");
+                    "A close is counted only when the accessibility swipe gesture was accepted by Android. The Recent-app UI can vary by manufacturer. OptiCore returns to the exact screen that launched the close action, so the result stays in the same panel tab.");
 
         } catch (Throwable e) {
             putError(out, e);
@@ -654,43 +652,14 @@ public final class RecentsAccessibilityService extends AccessibilityService {
         return metrics;
     }
 
-    private void returnToPanelSoon(long delayMs) {
+    private void returnToCallerSoon(long delayMs) {
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            Uri uri = Uri.parse(PANEL_URI);
-
-            String[] browsers = new String[] {
-                    "com.android.chrome",
-                    "com.sec.android.app.sbrowser"
-            };
-
-            for (String browserPackage : browsers) {
-                try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                    intent.setPackage(browserPackage);
-                    intent.addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK |
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
-                    if (intent.resolveActivity(getPackageManager()) != null) {
-                        startActivity(intent);
-                        return;
-                    }
-                } catch (Throwable ignored) {
-                }
-            }
-
             try {
-                Intent fallback = new Intent(Intent.ACTION_VIEW, uri);
-                fallback.addCategory(Intent.CATEGORY_BROWSABLE);
-                fallback.addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK |
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                startActivity(fallback);
-            } catch (Throwable ignored) {
+                // Return to the exact activity/tab that invoked the local API.
+                // Do not launch a new browser intent because Samsung/Chrome may
+                // restore a different tab.
                 performGlobalAction(GLOBAL_ACTION_BACK);
+            } catch (Throwable ignored) {
             }
         }, Math.max(0L, delayMs));
     }
