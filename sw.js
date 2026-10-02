@@ -1,21 +1,23 @@
-const CACHE="opticore-pwa-v9";
+const CACHE="opticore-pwa-v10-pages";
+const ROOT=new URL("./",self.location.href).href;
+const INDEX=new URL("./index.html",self.location.href).href;
 const STATIC=[
-  "/",
-  "/index.html",
-  "/professional-ui.css",
-  "/professional-ui.js",
-  "/live.js",
-  "/smart-clean.js",
-  "/cache-sync.js",
-  "/connection-guard.js",
-  "/resource-panel.js",
-  "/resource-summary.js",
-  "/manifest.webmanifest",
-  "/pwa-install.js",
-  "/icon-192.svg",
-  "/icon-512.svg",
-  "/camera-lab-pro.html",
-  "/optimizer-pro.html"
+  ROOT,
+  INDEX,
+  new URL("./professional-ui.css",self.location.href).href,
+  new URL("./professional-ui.js",self.location.href).href,
+  new URL("./live.js",self.location.href).href,
+  new URL("./smart-clean.js",self.location.href).href,
+  new URL("./cache-sync.js",self.location.href).href,
+  new URL("./connection-guard.js",self.location.href).href,
+  new URL("./resource-panel.js",self.location.href).href,
+  new URL("./resource-summary.js",self.location.href).href,
+  new URL("./manifest.webmanifest",self.location.href).href,
+  new URL("./pwa-install.js",self.location.href).href,
+  new URL("./icon-192.svg",self.location.href).href,
+  new URL("./icon-512.svg",self.location.href).href,
+  new URL("./camera-lab-pro.html",self.location.href).href,
+  new URL("./optimizer-pro.html",self.location.href).href
 ];
 
 self.addEventListener("install",event=>{
@@ -40,8 +42,8 @@ self.addEventListener("fetch",event=>{
 
   if(url.origin!==self.location.origin) return;
 
-  if(url.pathname.startsWith("/api/") ||
-     url.pathname.startsWith("/data/")) {
+  if(url.pathname.includes("/api/") ||
+     url.pathname.includes("/data/")) {
     return;
   }
 
@@ -50,10 +52,10 @@ self.addEventListener("fetch",event=>{
       fetch(event.request)
         .then(response=>{
           const copy=response.clone();
-          caches.open(CACHE).then(cache=>cache.put("/index.html",copy));
+          caches.open(CACHE).then(cache=>cache.put(INDEX,copy));
           return response;
         })
-        .catch(()=>caches.match("/index.html"))
+        .catch(()=>caches.match(INDEX))
     );
     return;
   }
