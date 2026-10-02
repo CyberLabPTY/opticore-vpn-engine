@@ -86,8 +86,8 @@ button:disabled{opacity:.45}
       <button id="selectAllBtn">Seleccionar todas</button>
       <button id="closeSelectedBtn" class="danger" disabled>Cerrar seleccionadas</button>
     </div>
-    <div id="usageResult" class="result">Esta lista se obtiene de las tarjetas que Android muestra en Aplicaciones recientes. No se usa el historial de uso como lista de cierre.</div>
-    <div class="note">La accesibilidad es opcional y se usa únicamente cuando tú solicitas detectar o cerrar tarjetas de Recientes. OptiCore, System UI, launcher, teclado y el navegador que mantiene abierto este panel permanecen protegidos.</div>
+    <div id="usageResult" class="result">Esta lista se obtiene de las tarjetas que Android muestra en Aplicaciones recientes. OptiCore entra a Recientes solo durante el escaneo y regresa automáticamente a este panel con el resultado.</div>
+    <div class="note">La accesibilidad es opcional y se usa únicamente cuando tú solicitas detectar o cerrar tarjetas de Recientes. El resultado se muestra aquí dentro. Las pantallas de autorización de Android son la única excepción porque el sistema obliga a abrir Ajustes. OptiCore, System UI, launcher, teclado y el navegador que mantiene abierto este panel permanecen protegidos.</div>
     <div id="usageList" class="list"></div>
   </section>
 </main>
@@ -182,7 +182,7 @@ button:disabled{opacity:.45}
 
   async function usage(){
     if(!requireEngine($("usageResult")))return null;
-    $("usageResult").innerHTML="<strong>Detectando aplicaciones abiertas...</strong><br>OptiCore abrirá Recientes por un instante para leer únicamente las tarjetas que Android exponga.";
+    $("usageResult").innerHTML="<strong>Detectando aplicaciones abiertas...</strong><br>OptiCore abrirá Recientes brevemente, detectará las tarjetas y volverá automáticamente a este panel.";
     const d=await json("./api/scan-open-apps?t="+Date.now(),{method:"POST"});
     const list=$("usageList");list.innerHTML="";
     if(!d.ok){
@@ -269,7 +269,7 @@ button:disabled{opacity:.45}
 
     $("closeSelectedBtn").disabled=true;
     $("releaseBackgroundBtn").disabled=true;
-    $("usageResult").innerHTML="<strong>Cerrando aplicaciones...</strong><br>Android mostrará Recientes brevemente mientras OptiCore realiza los gestos.";
+    $("usageResult").innerHTML="<strong>Cerrando aplicaciones...</strong><br>Android mostrará Recientes brevemente mientras OptiCore realiza los gestos y después volverá automáticamente a este panel.";
 
     try{
       const q=new URLSearchParams({targets:JSON.stringify(targets)});
