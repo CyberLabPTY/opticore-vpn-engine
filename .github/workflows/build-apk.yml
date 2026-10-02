@@ -11,6 +11,7 @@ on:
       - main
       - opticore-polish-v017
       - opticore-release-fix-v024
+      - opticore-process-fix-v025
 
 jobs:
   build:
