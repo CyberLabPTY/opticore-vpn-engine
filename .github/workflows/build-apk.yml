@@ -19,6 +19,7 @@ on:
       - opticore-same-tab-v030
       - opticore-inline-close-v031
       - opticore-open-apps-fix-v032
+      - opticore-recents-event-fix-v033
 
 jobs:
   build:
