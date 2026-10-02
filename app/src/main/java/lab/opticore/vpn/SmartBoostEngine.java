@@ -108,7 +108,7 @@ public final class SmartBoostEngine {
                     before.availablePercent >= HEALTHY_RAM) {
 
                 out.put("ok", true);
-                out.put("engine", "smart_fluency_v035");
+                out.put("engine", "smart_fluency_v037");
                 out.put("mode", "balanced");
                 out.put("smart_skip", true);
                 out.put("pass_count", 0);
@@ -191,7 +191,7 @@ public final class SmartBoostEngine {
             }
 
             out.put("ok", true);
-            out.put("engine", "smart_fluency_v035");
+            out.put("engine", "smart_fluency_v037");
             out.put("mode", aggressive ? "aggressive" : "balanced");
             out.put("android_sdk", Build.VERSION.SDK_INT);
             out.put("smart_skip", false);
@@ -203,7 +203,14 @@ public final class SmartBoostEngine {
             out.put("ram_before_percent", round1(before.availablePercent));
             out.put("ram_after_percent", round1(after.availablePercent));
             out.put("measured_delta_mb", round1(delta / 1048576.0));
-            out.put("measured_freed_mb", round1(Math.max(0L, delta) / 1048576.0));
+            boolean canAttributeFreed = attempted.length() > 0;
+            out.put(
+                    "measured_freed_mb",
+                    canAttributeFreed
+                            ? round1(Math.max(0L, delta) / 1048576.0)
+                            : 0.0);
+            out.put("measurement_attributed", canAttributeFreed);
+            out.put("no_safe_candidates", attempted.length() == 0);
             out.put("ram_low_before", before.lowMemory);
             out.put("ram_low_after", after.lowMemory);
             out.put("pressure_before", pressureLevel(before));
@@ -211,7 +218,9 @@ public final class SmartBoostEngine {
             out.put("second_pass_used", secondPassNeeded);
             out.put(
                     "note",
-                    "OptiCore prioriza procesos de usuario en segundo plano, mide la RAM real antes y despues y solo usa una segunda pasada si persiste la presion de memoria.");
+                    attempted.length() > 0
+                            ? "OptiCore prioriza procesos de usuario en segundo plano, mide la RAM real antes y despues y solo atribuye memoria liberada cuando intento liberar procesos."
+                            : "No se encontraron procesos de usuario seguros para liberar. La variacion de RAM observada pertenece al sistema y no se atribuye a OptiCore.");
 
         } catch (Throwable e) {
             putError(out, e);
