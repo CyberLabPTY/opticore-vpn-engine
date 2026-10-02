@@ -94,18 +94,33 @@
   };
 
   window.addEventListener("online",function(){
+    if(location.hostname!=="127.0.0.1"&&location.hostname!=="localhost"){
+      setState("Modo web público","warn");
+      return;
+    }
     failures=0;
     setState("Reconectando...","warn");
     setTimeout(check,150);
   });
 
   document.addEventListener("visibilitychange",function(){
-    if(!document.hidden){
+    if(!document.hidden &&
+       (location.hostname==="127.0.0.1"||location.hostname==="localhost")){
       setTimeout(check,250);
     }
   });
 
   function boot(){
+    var localPanel=
+      location.hostname==="127.0.0.1" ||
+      location.hostname==="localhost";
+    if(!localPanel){
+      failures=0;
+      setState("Modo web público","warn");
+      document.documentElement.classList.remove("oc-engine-offline");
+      document.documentElement.classList.remove("oc-engine-reconnecting");
+      return;
+    }
     setTimeout(check,900);
   }
 

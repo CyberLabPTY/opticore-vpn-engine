@@ -73,7 +73,7 @@
     var box=document.createElement("div");
     box.id="ocInstallIsland";
     box.innerHTML=
-      "<div class=\"ocpi\"><img src=\"/icon-192.svg\" alt=\"\"></div>"+
+      "<div class=\"ocpi\"><img src=\"./icon-192.svg\" alt=\"\"></div>"+
       "<div class=\"ocpt\"><b>INSTALAR OPTICORE</b><span>Panel rápido · pantalla completa</span></div>"+
       "<button id=\"ocInstallBtn\">INSTALAR</button>"+
       "<button class=\"occ\" id=\"ocInstallClose\">×</button>";
@@ -106,7 +106,7 @@
 
   if("serviceWorker" in navigator){
     window.addEventListener("load",function(){
-      navigator.serviceWorker.register("/sw.js",{scope:"/"})
+      navigator.serviceWorker.register("./sw.js",{scope:"./"})
         .catch(function(e){console.log("OptiCore SW",e)});
     });
   }
