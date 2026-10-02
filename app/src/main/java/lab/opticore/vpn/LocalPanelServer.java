@@ -267,10 +267,19 @@ public final class LocalPanelServer {
             } catch (Throwable ignored) {
             }
 
-            boolean bridgeRequest =
+            boolean bridgeStatusRequest =
                     "/api/bridge-status"
                             .equals(
                                     initialPath);
+
+            boolean bridgeDnsRequest =
+                    "/api/bridge-dns"
+                            .equals(
+                                    initialPath);
+
+            boolean bridgeRequest =
+                    bridgeStatusRequest ||
+                            bridgeDnsRequest;
 
             String origin = "";
             String bridgeToken = "";
@@ -350,6 +359,15 @@ public final class LocalPanelServer {
                             403,
                             jsonError(
                                     "bridge_not_paired"));
+
+                    return;
+                }
+
+                if (bridgeDnsRequest) {
+                    sendBridgeJson(
+                            socket,
+                            200,
+                            buildDnsAnalysisJson());
 
                     return;
                 }
@@ -1239,6 +1257,11 @@ public final class LocalPanelServer {
                             "8.8.8.8",
                             7);
 
+            PingResult cd =
+                    pingHost(
+                            "76.76.2.41",
+                            7);
+
             int cfScore =
                     score(cf);
 
@@ -1247,6 +1270,9 @@ public final class LocalPanelServer {
 
             int ggScore =
                     score(gg);
+
+            int cdScore =
+                    score(cd);
 
             String best =
                     "Cloudflare";
@@ -1265,6 +1291,17 @@ public final class LocalPanelServer {
             if (ggScore < bestScore) {
                 best =
                         "Google";
+
+                bestScore =
+                        ggScore;
+            }
+
+            if (cdScore < bestScore) {
+                best =
+                        "Control D · HaGeZi Pro";
+
+                bestScore =
+                        cdScore;
             }
 
             int cfDoh =
@@ -1273,22 +1310,41 @@ public final class LocalPanelServer {
             int ggDoh =
                     averageDoh(false);
 
+            int cdDoh =
+                    averageControlDDoh();
+
             String dohCandidate =
-                    cfDoh <= ggDoh
-                            ? "Cloudflare"
-                            : "Google";
+                    "Cloudflare";
 
             int dohMs =
-                    Math.min(
-                            cfDoh,
-                            ggDoh);
+                    cfDoh;
+
+            if (ggDoh < dohMs) {
+                dohCandidate =
+                        "Google";
+
+                dohMs =
+                        ggDoh;
+            }
+
+            if (cdDoh < dohMs) {
+                dohCandidate =
+                        "Control D · HaGeZi Pro";
+
+                dohMs =
+                        cdDoh;
+            }
 
             JSONObject out =
                     new JSONObject();
 
             out.put(
+                    "ok",
+                    true);
+
+            out.put(
                     "engine",
-                    "dns-embedded-1.0");
+                    "dns-embedded-1.1");
 
             out.put(
                     "updated_at",
@@ -1316,9 +1372,42 @@ public final class LocalPanelServer {
                             gg,
                             ggScore));
 
+            JSONObject controlD =
+                    pingJson(
+                            cd,
+                            cdScore);
+
+            controlD.put(
+                    "profile",
+                    "HaGeZi Pro");
+
+            controlD.put(
+                    "legacy_ipv4",
+                    "76.76.2.41");
+
+            controlD.put(
+                    "dot_hostname",
+                    "x-hagezi-pro.freedns.controld.com");
+
+            controlD.put(
+                    "doh_url",
+                    "https://freedns.controld.com/x-hagezi-pro");
+
+            controlD.put(
+                    "doh_average_ms",
+                    cdDoh);
+
+            out.put(
+                    "controld_hagezi_pro",
+                    controlD);
+
             out.put(
                     "latency_stability_candidate",
                     best);
+
+            out.put(
+                    "latency_stability_candidate_score",
+                    bestScore);
 
             out.put(
                     "cloudflare_doh_average_ms",
@@ -1327,6 +1416,10 @@ public final class LocalPanelServer {
             out.put(
                     "google_doh_average_ms",
                     ggDoh);
+
+            out.put(
+                    "controld_hagezi_pro_doh_average_ms",
+                    cdDoh);
 
             out.put(
                     "doh_candidate",
@@ -1339,6 +1432,10 @@ public final class LocalPanelServer {
             out.put(
                     "dns_changed",
                     false);
+
+            out.put(
+                    "note",
+                    "La selección es orientativa y se basa en esta muestra local. OptiCore no cambia el DNS automáticamente.");
 
             return out.toString();
 
@@ -2824,6 +2921,197 @@ public final class LocalPanelServer {
                 total /
                         count)
                 : 9999;
+    }
+
+    private static int averageControlDDoh() {
+
+        String[] names = {
+                "example.com",
+                "google.com",
+                "wikipedia.org"
+        };
+
+        long total = 0L;
+        int count = 0;
+
+        for (String name :
+                names) {
+
+            double ms =
+                    measureDohWire(
+                            "https://freedns.controld.com/x-hagezi-pro",
+                            name);
+
+            if (ms >= 0.0) {
+                total +=
+                        Math.round(ms);
+
+                count++;
+            }
+        }
+
+        return count > 0
+                ? (int) (
+                total /
+                        count)
+                : 9999;
+    }
+
+    private static double measureDohWire(
+            String endpoint,
+            String host) {
+
+        HttpURLConnection connection =
+                null;
+
+        long start =
+                System.nanoTime();
+
+        try {
+            byte[] query =
+                    buildDnsQuery(
+                            host);
+
+            String dns =
+                    Base64.encodeToString(
+                            query,
+                            Base64.URL_SAFE |
+                                    Base64.NO_WRAP |
+                                    Base64.NO_PADDING);
+
+            String separator =
+                    endpoint.contains("?")
+                            ? "&"
+                            : "?";
+
+            URL url =
+                    new URL(
+                            endpoint +
+                                    separator +
+                                    "dns=" +
+                                    dns);
+
+            connection =
+                    (HttpURLConnection)
+                            url.openConnection();
+
+            connection.setConnectTimeout(
+                    6000);
+
+            connection.setReadTimeout(
+                    6000);
+
+            connection.setRequestMethod(
+                    "GET");
+
+            connection.setRequestProperty(
+                    "User-Agent",
+                    "OptiCore/" + appVersion());
+
+            connection.setRequestProperty(
+                    "Accept",
+                    "application/dns-message");
+
+            int code =
+                    connection
+                            .getResponseCode();
+
+            InputStream in =
+                    code >= 200 &&
+                            code < 300
+                            ? connection
+                            .getInputStream()
+                            : connection
+                            .getErrorStream();
+
+            if (in != null) {
+                byte[] buffer =
+                        new byte[1024];
+
+                while (in.read(buffer) !=
+                        -1) {
+                }
+
+                in.close();
+            }
+
+            if (code < 200 ||
+                    code >= 300) {
+                return -1.0;
+            }
+
+            return (
+                    System.nanoTime() -
+                            start) /
+                    1_000_000.0;
+
+        } catch (Throwable ignored) {
+            return -1.0;
+
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private static byte[] buildDnsQuery(
+            String host)
+            throws Exception {
+
+        ByteArrayOutputStream out =
+                new ByteArrayOutputStream();
+
+        out.write(0x4f);
+        out.write(0x43);
+
+        out.write(0x01);
+        out.write(0x00);
+
+        out.write(0x00);
+        out.write(0x01);
+
+        out.write(0x00);
+        out.write(0x00);
+
+        out.write(0x00);
+        out.write(0x00);
+
+        out.write(0x00);
+        out.write(0x00);
+
+        String[] labels =
+                host.split("\\.");
+
+        for (String label :
+                labels) {
+
+            byte[] bytes =
+                    label.getBytes(
+                            StandardCharsets.US_ASCII);
+
+            if (bytes.length == 0 ||
+                    bytes.length > 63) {
+                throw new IllegalArgumentException(
+                        "invalid_dns_label");
+            }
+
+            out.write(
+                    bytes.length);
+
+            out.write(
+                    bytes);
+        }
+
+        out.write(0x00);
+
+        out.write(0x00);
+        out.write(0x01);
+
+        out.write(0x00);
+        out.write(0x01);
+
+        return out.toByteArray();
     }
 
     private static double measureDoh(
