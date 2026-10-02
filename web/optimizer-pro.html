@@ -78,16 +78,16 @@ button:disabled{opacity:.45}
   </section>
 
   <section class="section">
-    <h2>Actividad reciente</h2>
+    <h2>Aplicaciones abiertas</h2>
     <div class="actions">
-      <button id="usageBtn">Ver actividad reciente</button>
-      <button id="usageSettingsBtn">Autorizar acceso de uso</button>
-      <button id="releaseBackgroundBtn" class="danger">Liberar apps en segundo plano</button>
+      <button id="usageBtn">Detectar apps abiertas</button>
+      <button id="usageSettingsBtn">Autorizar accesibilidad</button>
+      <button id="releaseBackgroundBtn" class="danger">Cerrar apps abiertas detectadas</button>
       <button id="selectAllBtn">Seleccionar todas</button>
-      <button id="closeSelectedBtn" class="danger" disabled>Liberar seleccionadas</button>
+      <button id="closeSelectedBtn" class="danger" disabled>Cerrar seleccionadas</button>
     </div>
-    <div id="usageResult" class="result">OptiCore usa acceso de uso solo para identificar actividad reciente de aplicaciones; no lee su contenido.</div>
-    <div class="note">La liberación manual usa el motor Smart Boost ya integrado y actúa únicamente sobre candidatas de usuario permitidas por Android. También puedes marcar aplicaciones concretas y usar “Liberar seleccionadas”. OptiCore, System UI, launcher y teclado permanecen protegidos.</div>
+    <div id="usageResult" class="result">Esta lista se obtiene de las tarjetas que Android muestra en Aplicaciones recientes. No se usa el historial de uso como lista de cierre.</div>
+    <div class="note">La accesibilidad es opcional y se usa únicamente cuando tú solicitas detectar o cerrar tarjetas de Recientes. OptiCore, System UI, launcher, teclado y el navegador que mantiene abierto este panel permanecen protegidos.</div>
     <div id="usageList" class="list"></div>
   </section>
 </main>
@@ -181,47 +181,58 @@ button:disabled{opacity:.45}
   }
 
   async function usage(){
-    if(!requireEngine($("usageResult")))return;
-    const d=await json("./api/recent-usage?t="+Date.now());
+    if(!requireEngine($("usageResult")))return null;
+    $("usageResult").innerHTML="<strong>Detectando aplicaciones abiertas...</strong><br>OptiCore abrirá Recientes por un instante para leer únicamente las tarjetas que Android exponga.";
+    const d=await json("./api/scan-open-apps?t="+Date.now(),{method:"POST"});
     const list=$("usageList");list.innerHTML="";
-    if(!d.usage_access){
-      $("usageResult").innerHTML="<strong>Acceso de uso pendiente.</strong><br>Autorízalo para listar actividad reciente.";
-      return;
+    if(!d.ok){
+      if(d.reason==="accessibility_required"){
+        $("usageResult").innerHTML="<strong>Accesibilidad pendiente.</strong><br>Toca “Autorizar accesibilidad”, activa OptiCore y vuelve a intentar.";
+      }else{
+        $("usageResult").innerHTML="<strong>No se pudo detectar la lista de Recientes.</strong><br>"+escapeHtml(d.reason||"Android no expuso las tarjetas.");
+      }
+      updateSelectionUi();
+      return d;
     }
-    $("usageResult").innerHTML="<strong>Actividad reciente disponible.</strong><br>Se muestran hasta 20 aplicaciones de usuario. Esta lista es historial de uso y no significa que todas sigan ejecutándose.";
-    (d.apps||[]).forEach(x=>{
+    const apps=d.apps||[];
+    $("usageResult").innerHTML=apps.length
+      ? "<strong>Apps abiertas detectadas: "+apps.length+".</strong><br>Solo se muestran tarjetas que Android expuso en Aplicaciones recientes."
+      : "<strong>No se detectaron tarjetas abiertas.</strong><br>Android no expuso aplicaciones de usuario cerrables en Recientes.";
+    apps.forEach(x=>{
       const row=document.createElement("div");row.className="app";
       const label=document.createElement("label");label.className="app-select";
       const check=document.createElement("input");
       check.type="checkbox";
       check.className="appSelect";
       check.dataset.package=String(x.package||"");
+      check.dataset.label=String(x.label||x.package||"Aplicación");
       check.addEventListener("change",updateSelectionUi);
       const text=document.createElement("span");
-      text.innerHTML="<b>"+escapeHtml(x.label||x.package)+"</b><br><small>"+escapeHtml(x.package)+"</small>";
-      const age=document.createElement("small");
-      age.textContent=formatAge(x.last_used_ms);
+      text.innerHTML="<b>"+escapeHtml(x.label||x.package||"Aplicación")+"</b><br><small>"+escapeHtml(x.package||"Tarjeta de Recientes")+"</small>";
+      const state=document.createElement("small");
+      state.textContent="ABIERTA";
       label.appendChild(check);
       label.appendChild(text);
       row.appendChild(label);
-      row.appendChild(age);
+      row.appendChild(state);
       list.appendChild(row);
     });
     updateSelectionUi();
+    return d;
   }
 
-  function selectedPackages(){
+  function selectedTargets(){
     return [...document.querySelectorAll(".appSelect:checked")]
-      .map(x=>x.dataset.package)
-      .filter(Boolean);
+      .map(x=>({label:x.dataset.label||"",package:x.dataset.package||""}))
+      .filter(x=>x.label);
   }
 
   function updateSelectionUi(){
-    const selected=selectedPackages();
+    const selected=selectedTargets();
     $("closeSelectedBtn").disabled=selected.length===0;
     $("closeSelectedBtn").textContent=selected.length
-      ? "Liberar seleccionadas ("+selected.length+")"
-      : "Liberar seleccionadas";
+      ? "Cerrar seleccionadas ("+selected.length+")"
+      : "Cerrar seleccionadas";
     const all=[...document.querySelectorAll(".appSelect")];
     $("selectAllBtn").textContent=all.length>0&&selected.length===all.length
       ? "Deseleccionar todas"
@@ -231,7 +242,7 @@ button:disabled{opacity:.45}
   function toggleSelectAll(){
     const all=[...document.querySelectorAll(".appSelect")];
     if(!all.length){
-      $("usageResult").innerHTML="<strong>Primero carga la actividad reciente.</strong><br>Toca “Ver actividad reciente” para mostrar las aplicaciones.";
+      $("usageResult").innerHTML="<strong>Primero detecta las aplicaciones abiertas.</strong><br>Toca “Detectar apps abiertas”.";
       return;
     }
     const mark=!all.every(x=>x.checked);
@@ -239,131 +250,87 @@ button:disabled{opacity:.45}
     updateSelectionUi();
   }
 
-  async function closeSelectedApps(){
+  async function closeTargets(targets,confirmFirst){
     if(!requireEngine($("usageResult")))return;
-    const selected=selectedPackages();
-    if(!selected.length){
-      $("usageResult").innerHTML="<strong>No hay aplicaciones seleccionadas.</strong><br>Marca una o más aplicaciones y vuelve a intentarlo.";
+    if(!targets.length){
+      $("usageResult").innerHTML="<strong>No hay aplicaciones seleccionadas.</strong><br>Marca una o más tarjetas abiertas y vuelve a intentarlo.";
       return;
     }
 
-    const ok=window.confirm(
-      "OptiCore solicitará a Android liberar "+selected.length+
-      " aplicación(es) seleccionada(s) en segundo plano. Android conserva el control final. ¿Continuar?"
-    );
-    if(!ok)return;
+    if(confirmFirst){
+      const names=targets.map(x=>x.label).join(", ");
+      const ok=window.confirm(
+        "OptiCore cerrará "+targets.length+" tarjeta(s) de Aplicaciones recientes mediante accesibilidad:\n\n"+
+        names+
+        "\n\nDespués solicitará liberar sus procesos de usuario cuando Android lo permita. ¿Continuar?"
+      );
+      if(!ok)return;
+    }
 
     $("closeSelectedBtn").disabled=true;
     $("releaseBackgroundBtn").disabled=true;
-    $("usageResult").innerHTML="<strong>Procesando selección...</strong><br>OptiCore está solicitando a Android liberar únicamente las aplicaciones marcadas.";
+    $("usageResult").innerHTML="<strong>Cerrando aplicaciones...</strong><br>Android mostrará Recientes brevemente mientras OptiCore realiza los gestos.";
 
     try{
-      const q=new URLSearchParams({packages:selected.join(",")});
+      const q=new URLSearchParams({targets:JSON.stringify(targets)});
       q.set("t",String(Date.now()));
-      const d=await json("./api/release-selected?"+q.toString(),{method:"POST"});
+      const d=await json("./api/close-recent-apps?"+q.toString(),{method:"POST"});
 
       if(!d.ok){
-        $("usageResult").innerHTML="<strong>No se pudo completar.</strong><br>"+escapeHtml(d.reason||"Acción bloqueada por Android.");
+        if(d.reason==="accessibility_required"){
+          $("usageResult").innerHTML="<strong>Accesibilidad pendiente.</strong><br>Toca “Autorizar accesibilidad”, habilita OptiCore y vuelve a intentar.";
+        }else{
+          $("usageResult").innerHTML="<strong>No se pudo cerrar.</strong><br>"+escapeHtml(d.reason||"Android rechazó la acción.");
+        }
         return;
       }
 
-      const delta=Number(d.measured_delta_mb)||0;
+      let memoryText="";
+      const packages=targets.map(x=>x.package).filter(Boolean);
+      if(packages.length){
+        try{
+          const m=await json("./api/release-selected?packages="+encodeURIComponent(packages.join(","))+"&t="+Date.now(),{method:"POST"});
+          if(m.ok){
+            const delta=Number(m.measured_delta_mb)||0;
+            memoryText="<br>RAM antes: "+n(m.ram_before_mb)+" MB · RAM después: "+n(m.ram_after_mb)+" MB · Cambio: "+(delta>=0?"+":"")+n(delta)+" MB.";
+          }
+        }catch(_){}
+      }
+
       $("usageResult").innerHTML=
-        "<strong>Selección procesada.</strong><br>"+
-        "Seleccionadas: "+selected.length+" · "+
-        "Solicitudes enviadas: "+(d.attempted_count||0)+" · "+
-        "Omitidas/protegidas: "+(d.skipped_count||0)+".<br>"+
-        "RAM antes: "+n(d.ram_before_mb)+" MB · "+
-        "RAM después: "+n(d.ram_after_mb)+" MB · "+
-        "Cambio medido: "+(delta>=0?"+":"")+n(delta)+" MB.<br>"+
-        "Android decide qué procesos se liberan o se reinician.<br>Esta acción no equivale a “Forzar detención” y no elimina la tarjeta de la pantalla de aplicaciones recientes.";
+        "<strong>Cierre procesado.</strong><br>"+
+        "Solicitadas: "+targets.length+" · "+
+        "Tarjetas cerradas por gesto: "+(d.closed_count||0)+" · "+
+        "No encontradas: "+(d.not_found_count||0)+" · "+
+        "Protegidas: "+(d.protected_count||0)+"."+
+        memoryText;
+
       await scan().catch(()=>{});
+      await usage().catch(()=>{});
+
     }catch(e){
-      $("usageResult").innerHTML="<strong>Error al procesar la selección.</strong><br>"+escapeHtml(String(e));
+      $("usageResult").innerHTML="<strong>Error durante el cierre.</strong><br>"+escapeHtml(String(e));
     }finally{
       $("releaseBackgroundBtn").disabled=false;
       updateSelectionUi();
     }
   }
 
-  async function releaseBackgroundApps(){
-    if(!requireEngine($("usageResult")))return;
+  async function closeSelectedApps(){
+    await closeTargets(selectedTargets(),true);
+  }
 
-    const alreadySelected=selectedPackages();
-    if(alreadySelected.length){
-      await closeSelectedApps();
+  async function releaseBackgroundApps(){
+    const d=await usage();
+    if(!d||!d.ok)return;
+    const all=[...document.querySelectorAll(".appSelect")]
+      .map(x=>({label:x.dataset.label||"",package:x.dataset.package||""}))
+      .filter(x=>x.label);
+    if(!all.length){
+      $("usageResult").innerHTML="<strong>No hay aplicaciones abiertas detectadas para cerrar.</strong>";
       return;
     }
-
-    $("releaseBackgroundBtn").disabled=true;
-    $("usageResult").innerHTML="<strong>Analizando actividad reciente...</strong><br>OptiCore buscará aplicaciones de usuario que no estén en primer plano para preparar una liberación segura.";
-
-    try{
-      const d=await json("./api/recent-usage?t="+Date.now());
-
-      if(!d.usage_access){
-        $("usageResult").innerHTML="<strong>Acceso de uso pendiente.</strong><br>Autorízalo para identificar aplicaciones recientes antes de liberar procesos.";
-        return;
-      }
-
-      const now=Date.now();
-      const candidates=(d.apps||[])
-        .filter(x=>{
-          const last=Number(x.last_used_ms)||0;
-          const age=now-last;
-          return last>0 && age>30000 && age<(6*60*60*1000);
-        })
-        .slice(0,8);
-
-      if(!candidates.length){
-        $("usageResult").innerHTML="<strong>No hay candidatas seguras en este momento.</strong><br>Usa “Ver actividad reciente” y selecciona manualmente las aplicaciones que deseas liberar.";
-        await usage().catch(()=>{});
-        return;
-      }
-
-      const names=candidates.map(x=>x.label||x.package).join(", ");
-      const ok=window.confirm(
-        "OptiCore encontró "+candidates.length+
-        " aplicación(es) recientes para solicitar liberación en segundo plano:\n\n"+
-        names+
-        "\n\nAndroid conserva el control final y las tarjetas de Recientes pueden permanecer visibles. ¿Continuar?"
-      );
-      if(!ok)return;
-
-      const q=new URLSearchParams({
-        packages:candidates.map(x=>x.package).filter(Boolean).join(",")
-      });
-      q.set("t",String(Date.now()));
-
-      $("usageResult").innerHTML="<strong>Procesando...</strong><br>OptiCore está solicitando a Android liberar los procesos seleccionados por el análisis de actividad reciente.";
-
-      const result=await json("./api/release-selected?"+q.toString(),{method:"POST"});
-
-      if(!result.ok){
-        $("usageResult").innerHTML="<strong>No se pudo completar.</strong><br>"+escapeHtml(result.reason||"Acción bloqueada por Android.");
-        return;
-      }
-
-      const delta=Number(result.measured_delta_mb)||0;
-      $("usageResult").innerHTML=
-        "<strong>Liberación solicitada y medida.</strong><br>"+
-        "Aplicaciones analizadas: "+candidates.length+" · "+
-        "Solicitudes enviadas: "+(result.attempted_count||0)+" · "+
-        "Omitidas/protegidas: "+(result.skipped_count||0)+".<br>"+
-        "RAM antes: "+n(result.ram_before_mb)+" MB · "+
-        "RAM después: "+n(result.ram_after_mb)+" MB · "+
-        "Cambio medido: "+(delta>=0?"+":"")+n(delta)+" MB.<br>"+
-        "Las tarjetas de Aplicaciones recientes pueden seguir visibles aunque Android haya liberado procesos. Esta función no equivale a “Forzar detención”.";
-
-      await scan().catch(()=>{});
-      await usage().catch(()=>{});
-
-    }catch(e){
-      $("usageResult").innerHTML="<strong>Error durante la liberación.</strong><br>"+escapeHtml(String(e));
-    }finally{
-      $("releaseBackgroundBtn").disabled=false;
-      updateSelectionUi();
-    }
+    await closeTargets(all,true);
   }
 
   function formatAge(ms){const d=Math.max(0,Date.now()-Number(ms||0));const m=Math.round(d/60000);return m<1?"ahora":m<60?m+" min":Math.round(m/60)+" h"}
@@ -383,7 +350,7 @@ button:disabled{opacity:.45}
   $("selectAllBtn").onclick=toggleSelectAll;
   $("closeSelectedBtn").onclick=()=>closeSelectedApps().catch(e=>$("usageResult").textContent=String(e));
   $("batterySettingsBtn").onclick=()=>openSettings("./api/open-battery-settings",$("batteryResult"));
-  $("usageSettingsBtn").onclick=()=>openSettings("./api/open-usage-settings",$("usageResult"));
+  $("usageSettingsBtn").onclick=()=>openSettings("./api/open-accessibility-settings",$("usageResult"));
 
   scan().catch(()=>{});
   battery().catch(()=>{});
