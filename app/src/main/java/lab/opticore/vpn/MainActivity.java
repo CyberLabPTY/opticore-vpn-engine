@@ -348,16 +348,39 @@ public final class MainActivity extends Activity {
     }
 
     private void openPanel() {
+        Uri panelUri = Uri.parse("http://127.0.0.1:8766/");
+
+        // En algunos Android 9 el selector del sistema ofrece visores de archivos
+        // para una URL local. Preferimos un navegador real y evitamos ese selector.
+        String[] browsers = new String[] {
+                "com.android.chrome",
+                "com.sec.android.app.sbrowser"
+        };
+
+        for (String browserPackage : browsers) {
+            try {
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, panelUri);
+                browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+                browserIntent.setPackage(browserPackage);
+
+                if (browserIntent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(browserIntent);
+                    return;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
         try {
-            startActivity(
-                    new Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("http://127.0.0.1:8766/")));
+            Intent fallback = new Intent(Intent.ACTION_VIEW, panelUri);
+            fallback.addCategory(Intent.CATEGORY_BROWSABLE);
+            fallback.setType("text/html");
+            startActivity(fallback);
         } catch (Exception e) {
             Toast.makeText(
                     this,
-                    "No se pudo abrir el panel OptiCore",
-                    Toast.LENGTH_SHORT).show();
+                    "No se encontró un navegador para abrir el panel OptiCore",
+                    Toast.LENGTH_LONG).show();
         }
     }
 
