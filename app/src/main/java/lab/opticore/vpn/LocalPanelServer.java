@@ -973,10 +973,23 @@ public final class LocalPanelServer {
                     true);
 
             out.put(
-                    "bridge_expires_at",
+                    "bridge_persistent",
+                    true);
+
+            out.put(
+                    "device_id",
+                    WebBridgeAuth.deviceId(
+                            appContext));
+
+            out.put(
+                    "paired_clients",
                     WebBridgeAuth
-                            .expiresAt(
+                            .authorizedClientCount(
                                     appContext));
+
+            out.put(
+                    "bridge_expires_at",
+                    0L);
 
             out.put(
                     "vpn_connected",
