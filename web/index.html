@@ -628,7 +628,7 @@ var rx=num(bd.vpn_rx_bps),tx=num(bd.vpn_tx_bps),rxs=num(bd.vpn_rx_ewma_bps),txs=
 setText("qfRxRate",fmtRate(rx));setText("qfTxRate",fmtRate(tx));setText("qfRxTotal",fmtBytes(bd.vpn_rx_bytes));setText("qfTxTotal",fmtBytes(bd.vpn_tx_bytes));setText("qfRxSmooth",fmtRate(rxs));setText("qfTxSmooth",fmtRate(txs));
 var rxFill=document.getElementById("qfRxFill"),txFill=document.getElementById("qfTxFill");if(rxFill)rxFill.style.width=activityIndex(rxs)+"%";if(txFill)txFill.style.width=activityIndex(txs)+"%";
 var b=document.getElementById("qfBurst");if(b){b.className="qf-burst"+(bd.vpn_burst?" hot":"");b.textContent=bd.vpn_burst?"RÁFAGA":"FLUJO ESTABLE"}
-setText("qfSamples","OptiCore "+(bd.version||"")+" · "+(bd.vpn_connected?"Túnel activo":"Túnel inactivo"));setText("qfActivity",bd.vpn_connected?"VPN activa":"VPN inactiva");var qr=document.querySelector("#qflowLiveV2 .qf-real");if(qr)qr.textContent="WIREGUARD ENLAZADO";return;
+setText("qfSamples","OptiCore "+(bd.version||"")+" · "+(bd.vpn_connected?"Túnel activo":"Túnel inactivo"));setText("qfActivity",bd.vpn_connected?"VPN activa":"VPN inactiva");var qr=document.querySelector("#qflowLiveV2 .qf-real");if(qr)qr.textContent="WIREGUARD ENLAZADO";historyPush(rxs,txs);draw();return;
 }
 setText("qfRxRate","--");setText("qfTxRate","--");setText("qfRxTotal","--");setText("qfTxTotal","--");setText("qfRxSmooth","--");setText("qfTxSmooth","--");setText("qfSamples","Telemetría disponible al enlazar OptiCore Android");setText("qfActivity","Actividad --");var b=document.getElementById("qfBurst");if(b){b.className="qf-burst";b.textContent="REQUIERE APP"}return;
 }
