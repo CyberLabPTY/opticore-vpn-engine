@@ -35,6 +35,7 @@ on:
       - opticore-final-v044-close-confirmation
       - opticore-final-v045-close-refresh-verify
       - opticore-v046-step2-dns-current
+      # OptiCore 0.4.6 DNS test build enabled
 
 jobs:
   build:
