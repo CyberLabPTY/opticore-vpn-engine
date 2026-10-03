@@ -1357,7 +1357,7 @@ public final class LocalPanelServer {
 
             out.put(
                     "engine",
-                    "dns-embedded-1.1");
+                    "dns-embedded-1.2");
 
             out.put(
                     "updated_at",
@@ -1366,6 +1366,10 @@ public final class LocalPanelServer {
             out.put(
                     "network_interface",
                     activeInterfaceName());
+
+            out.put(
+                    "current_dns",
+                    buildCurrentDnsInfoJson());
 
             out.put(
                     "cloudflare",
@@ -1455,6 +1459,163 @@ public final class LocalPanelServer {
         } catch (Throwable e) {
             return jsonError(
                     "dns_analysis_failed");
+        }
+    }
+
+    private static JSONObject buildCurrentDnsInfoJson()
+            throws Exception {
+
+        JSONObject out =
+                new JSONObject();
+
+        JSONArray servers =
+                new JSONArray();
+
+        out.put(
+                "available",
+                false);
+
+        out.put(
+                "interface",
+                "N/D");
+
+        out.put(
+                "servers",
+                servers);
+
+        out.put(
+                "private_dns_active",
+                false);
+
+        out.put(
+                "private_dns_mode",
+                "off");
+
+        out.put(
+                "private_dns_server_name",
+                JSONObject.NULL);
+
+        try {
+            ConnectivityManager cm =
+                    (ConnectivityManager)
+                            appContext
+                                    .getSystemService(
+                                            Context.CONNECTIVITY_SERVICE);
+
+            if (cm == null) {
+                out.put(
+                        "error",
+                        "connectivity_manager_unavailable");
+
+                return out;
+            }
+
+            Network active =
+                    cm.getActiveNetwork();
+
+            if (active == null) {
+                out.put(
+                        "error",
+                        "active_network_unavailable");
+
+                return out;
+            }
+
+            LinkProperties props =
+                    cm.getLinkProperties(
+                            active);
+
+            if (props == null) {
+                out.put(
+                        "error",
+                        "link_properties_unavailable");
+
+                return out;
+            }
+
+            String iface =
+                    props.getInterfaceName();
+
+            if (iface != null &&
+                    !iface.trim().isEmpty()) {
+
+                out.put(
+                        "interface",
+                        iface.trim());
+            }
+
+            for (InetAddress address :
+                    props.getDnsServers()) {
+
+                if (address == null) {
+                    continue;
+                }
+
+                String host =
+                        address.getHostAddress();
+
+                if (host != null &&
+                        !host.trim().isEmpty()) {
+
+                    servers.put(
+                            host.trim());
+                }
+            }
+
+            boolean privateDnsActive =
+                    false;
+
+            String privateDnsServerName =
+                    null;
+
+            if (Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.P) {
+
+                privateDnsActive =
+                        props.isPrivateDnsActive();
+
+                privateDnsServerName =
+                        props.getPrivateDnsServerName();
+            }
+
+            out.put(
+                    "private_dns_active",
+                    privateDnsActive);
+
+            boolean strict =
+                    privateDnsActive &&
+                            privateDnsServerName != null &&
+                            !privateDnsServerName
+                                    .trim()
+                                    .isEmpty();
+
+            out.put(
+                    "private_dns_mode",
+                    privateDnsActive
+                            ? strict
+                            ? "strict"
+                            : "opportunistic"
+                            : "off");
+
+            if (strict) {
+                out.put(
+                        "private_dns_server_name",
+                        privateDnsServerName
+                                .trim());
+            }
+
+            out.put(
+                    "available",
+                    servers.length() > 0);
+
+            return out;
+
+        } catch (Throwable e) {
+            out.put(
+                    "error",
+                    "current_dns_unavailable");
+
+            return out;
         }
     }
 
