@@ -40,6 +40,7 @@ on:
       - opticore-stable-v0461-ui-labels
       - opticore-stable-v0462-dual-panel-buttons
       - opticore-stable-v0463-dns-parallel
+      - opticore-shizuku-v050-test3
       # OptiCore 0.4.6 DNS test build enabled
 
 jobs:
