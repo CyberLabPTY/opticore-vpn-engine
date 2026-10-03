@@ -43,6 +43,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -55,6 +57,7 @@ public final class LocalPanelServer {
     private static final String PANEL_BUNDLE = "panel-bundle.zip";
 
     private static final ExecutorService CLIENTS = Executors.newCachedThreadPool();
+    private static final ExecutorService DNS_WORKERS = Executors.newFixedThreadPool(7);
     private static final Map<String, byte[]> ASSETS =
             Collections.synchronizedMap(new HashMap<>());
 
@@ -1324,25 +1327,97 @@ public final class LocalPanelServer {
 
     private static String buildDnsAnalysisJson() {
         try {
+            /*
+             * Ejecuta las cuatro pruebas ICMP y las tres familias DoH
+             * en paralelo. La version anterior las ejecutaba una detras
+             * de otra y podia tardar mas de 30 s si un proveedor era lento.
+             * Conservamos las mismas comprobaciones y aplicamos un limite
+             * global para que el panel no quede esperando indefinidamente.
+             */
+            Future<PingResult> cfFuture =
+                    DNS_WORKERS.submit(
+                            () -> pingHost(
+                                    "1.1.1.1",
+                                    7));
+
+            Future<PingResult> q9Future =
+                    DNS_WORKERS.submit(
+                            () -> pingHost(
+                                    "9.9.9.9",
+                                    7));
+
+            Future<PingResult> ggFuture =
+                    DNS_WORKERS.submit(
+                            () -> pingHost(
+                                    "8.8.8.8",
+                                    7));
+
+            Future<PingResult> cdFuture =
+                    DNS_WORKERS.submit(
+                            () -> pingHost(
+                                    "76.76.2.41",
+                                    7));
+
+            Future<Integer> cfDohFuture =
+                    DNS_WORKERS.submit(
+                            () -> averageDoh(
+                                    true));
+
+            Future<Integer> ggDohFuture =
+                    DNS_WORKERS.submit(
+                            () -> averageDoh(
+                                    false));
+
+            Future<Integer> cdDohFuture =
+                    DNS_WORKERS.submit(
+                            LocalPanelServer::
+                                    averageControlDDoh);
+
+            long deadlineMs =
+                    System.currentTimeMillis() +
+                            10000L;
+
             PingResult cf =
-                    pingHost(
-                            "1.1.1.1",
-                            7);
+                    awaitDnsFuture(
+                            cfFuture,
+                            deadlineMs,
+                            unavailablePingResult());
 
             PingResult q9 =
-                    pingHost(
-                            "9.9.9.9",
-                            7);
+                    awaitDnsFuture(
+                            q9Future,
+                            deadlineMs,
+                            unavailablePingResult());
 
             PingResult gg =
-                    pingHost(
-                            "8.8.8.8",
-                            7);
+                    awaitDnsFuture(
+                            ggFuture,
+                            deadlineMs,
+                            unavailablePingResult());
 
             PingResult cd =
-                    pingHost(
-                            "76.76.2.41",
-                            7);
+                    awaitDnsFuture(
+                            cdFuture,
+                            deadlineMs,
+                            unavailablePingResult());
+
+            int cfDoh =
+                    awaitDnsFuture(
+                            cfDohFuture,
+                            deadlineMs,
+                            9999);
+
+            int ggDoh =
+                    awaitDnsFuture(
+                            ggDohFuture,
+                            deadlineMs,
+                            9999);
+
+            int cdDoh =
+                    awaitDnsFuture(
+                            cdDohFuture,
+                            deadlineMs,
+                            9999);
 
             int cfScore =
                     score(cf);
@@ -1386,15 +1461,6 @@ public final class LocalPanelServer {
                         cdScore;
             }
 
-            int cfDoh =
-                    averageDoh(true);
-
-            int ggDoh =
-                    averageDoh(false);
-
-            int cdDoh =
-                    averageControlDDoh();
-
             String dohCandidate =
                     "Cloudflare";
 
@@ -1426,7 +1492,15 @@ public final class LocalPanelServer {
 
             out.put(
                     "engine",
-                    "dns-embedded-1.2");
+                    "dns-embedded-1.3");
+
+            out.put(
+                    "parallel_analysis",
+                    true);
+
+            out.put(
+                    "analysis_timeout_ms",
+                    10000);
 
             out.put(
                     "updated_at",
@@ -1521,13 +1595,61 @@ public final class LocalPanelServer {
 
             out.put(
                     "note",
-                    "La selección es orientativa y se basa en esta muestra local. OptiCore no cambia el DNS automáticamente.");
+                    "La seleccion es orientativa y se basa en esta muestra local. OptiCore no cambia el DNS automaticamente.");
 
             return out.toString();
 
         } catch (Throwable e) {
             return jsonError(
                     "dns_analysis_failed");
+        }
+    }
+
+    private static PingResult unavailablePingResult() {
+        PingResult result =
+                new PingResult();
+
+        result.avgMs =
+                9999.0;
+
+        result.variationMs =
+                9999.0;
+
+        result.lossPercent =
+                100.0;
+
+        result.available =
+                false;
+
+        return result;
+    }
+
+    private static <T> T awaitDnsFuture(
+            Future<T> future,
+            long deadlineMs,
+            T fallback) {
+
+        long remaining =
+                deadlineMs -
+                        System.currentTimeMillis();
+
+        if (remaining <= 0L) {
+            future.cancel(
+                    true);
+
+            return fallback;
+        }
+
+        try {
+            return future.get(
+                    remaining,
+                    TimeUnit.MILLISECONDS);
+
+        } catch (Throwable ignored) {
+            future.cancel(
+                    true);
+
+            return fallback;
         }
     }
 
@@ -3136,6 +3258,11 @@ public final class LocalPanelServer {
 
         for (String name :
                 names) {
+            if (Thread.currentThread()
+                    .isInterrupted()) {
+                break;
+            }
+
 
             String url =
                     cloudflare
@@ -3179,6 +3306,11 @@ public final class LocalPanelServer {
 
         for (String name :
                 names) {
+            if (Thread.currentThread()
+                    .isInterrupted()) {
+                break;
+            }
+
 
             double ms =
                     measureDohWire(
