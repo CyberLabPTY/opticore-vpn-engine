@@ -12,16 +12,33 @@ public final class OptiCoreApp extends Application {
     public void onCreate() {
         super.onCreate();
 
+        /*
+         * Motor avanzado opcional.
+         * Si Shizuku no esta disponible, OptiCore sigue
+         * funcionando normalmente.
+         */
+        ShizukuEngine.init();
+
         LocalStatusServer.start(this);
         LocalPanelServer.start(this);
 
         GoBackend.setAlwaysOnCallback(() -> {
-            Intent i = new Intent(this, EngineService.class);
-            i.setAction(EngineService.ACTION_ALWAYS_ON);
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent i =
+                    new Intent(
+                            this,
+                            EngineService.class);
+
+            i.setAction(
+                    EngineService.ACTION_ALWAYS_ON);
+
+            if (Build.VERSION.SDK_INT
+                    >= Build.VERSION_CODES.O) {
+
                 startForegroundService(i);
+
             } else {
+
                 startService(i);
             }
         });
