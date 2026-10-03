@@ -35,6 +35,7 @@ on:
       - opticore-final-v044-close-confirmation
       - opticore-final-v045-close-refresh-verify
       - opticore-v046-step2-dns-current
+      - opticore-v046-step3-autolink
       # OptiCore 0.4.6 DNS test build enabled
 
 jobs:
@@ -169,3 +170,16 @@ jobs:
             --title "OptiCore 0.4.6 Test 1" \
             --notes "Build de prueba 0.4.6-test1 con lectura del DNS actual de Android y Private DNS."
 
+
+
+      - name: Publish direct OptiCore 0.4.6 test2 APK
+        if: github.ref == 'refs/heads/opticore-v046-step3-autolink'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk OptiCore-v0.4.6-test2.apk
+          gh release delete v0.4.6-test2 --cleanup-tag --yes || true
+          gh release create v0.4.6-test2 OptiCore-v0.4.6-test2.apk \
+            --target "${GITHUB_SHA}" \
+            --title "OptiCore 0.4.6 Test 2" \
+            --notes "Build de prueba 0.4.6-test2 con Auto-Link persistente y recuperacion automatica del bridge web/PWA."
