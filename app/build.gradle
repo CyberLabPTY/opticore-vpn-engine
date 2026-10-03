@@ -10,8 +10,12 @@ android {
         applicationId "lab.opticore.vpn"
         minSdk 28
         targetSdk 36
-        versionCode 42
-        versionName "0.4.6.3"
+        versionCode 45
+        versionName "0.5.0-test3"
+    }
+
+    buildFeatures {
+        aidl true
     }
 
     compileOptions {
@@ -20,7 +24,7 @@ android {
         coreLibraryDesugaringEnabled true
     }
 
-    // La carpeta web/ es la fuente canónica de la interfaz para Web, PWA y APK.
+    // La carpeta web/ es la fuente canonica de la interfaz para Web, PWA y APK.
     sourceSets {
         main {
             assets.srcDirs = [file("$buildDir/generated/opticorePanelAssets")]
@@ -43,27 +47,49 @@ tasks.register("generateOptiCorePanelAssets") {
         ant.zip(destfile: zipFile, basedir: opticoreWebDir)
 
         def encoded = zipFile.bytes.encodeBase64().toString()
-        def chunkSize = Math.max(1, (int) Math.ceil(encoded.length() / 6.0d))
+        def chunkSize = Math.max(
+                1,
+                (int) Math.ceil(encoded.length() / 6.0d)
+        )
 
         (0..<6).each { i ->
             def from = i * chunkSize
-            def to = Math.min(encoded.length(), from + chunkSize)
-            def text = from < encoded.length() ? encoded.substring(from, to) : ""
+            def to = Math.min(
+                    encoded.length(),
+                    from + chunkSize
+            )
+
+            def text =
+                    from < encoded.length()
+                            ? encoded.substring(from, to)
+                            : ""
+
             new File(
                     generatedPanelAssets,
-                    String.format(Locale.US, "panel-bundle.b64.%02d", i)
+                    String.format(
+                            Locale.US,
+                            "panel-bundle.b64.%02d",
+                            i
+                    )
             ).setText(text, "UTF-8")
         }
     }
 }
 
 tasks.configureEach { task ->
-    if (task.name.startsWith("merge") && task.name.endsWith("Assets")) {
-        task.dependsOn("generateOptiCorePanelAssets")
+    if (task.name.startsWith("merge")
+            && task.name.endsWith("Assets")) {
+        task.dependsOn(
+                "generateOptiCorePanelAssets"
+        )
     }
 }
 
 dependencies {
     implementation 'com.wireguard.android:tunnel:1.0.20260102'
+
+    implementation 'dev.rikka.shizuku:api:13.1.5'
+    implementation 'dev.rikka.shizuku:provider:13.1.5'
+
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
 }
