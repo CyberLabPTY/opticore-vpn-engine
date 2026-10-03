@@ -165,7 +165,11 @@ public final class MainActivity extends Activity {
         usage.setOnClickListener(v -> openUsageAccess());
         root.addView(usage);
 
-        Button panel = button("Abrir panel OptiCore");
+        Button site = button("Abrir sitio OptiCore");
+        site.setOnClickListener(v -> openPublicSite());
+        root.addView(site);
+
+        Button panel = button("Abrir panel local");
         panel.setOnClickListener(v -> openPanel());
         root.addView(panel);
 
@@ -488,6 +492,21 @@ public final class MainActivity extends Activity {
                     this,
                     "No se pudieron abrir los ajustes de acceso de uso",
                     Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openPublicSite() {
+        Uri siteUri = Uri.parse(WebBridgeAuth.PUBLIC_SITE);
+
+        try {
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, siteUri);
+            browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+            startActivity(browserIntent);
+        } catch (Exception e) {
+            Toast.makeText(
+                    this,
+                    "No se encontró un navegador para abrir el sitio OptiCore",
+                    Toast.LENGTH_LONG).show();
         }
     }
 
