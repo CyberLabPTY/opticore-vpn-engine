@@ -1,4 +1,4 @@
-const CACHE="opticore-pwa-v17-qflow";
+const CACHE="opticore-pwa-v18-qflow-bridge";
 const ROOT=new URL("./",self.location.href).href;
 const INDEX=new URL("./index.html",self.location.href).href;
 const STATIC=[
