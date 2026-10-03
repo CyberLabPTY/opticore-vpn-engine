@@ -157,3 +157,15 @@ jobs:
             --title "OptiCore 0.4.5 Test" \
             --notes "Build de prueba 0.4.5 con verificacion de cierre tras reabrir Android Recents."
 
+      - name: Publish direct OptiCore 0.4.6 test1 APK
+        if: github.ref == 'refs/heads/opticore-v046-step2-dns-current'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk OptiCore-v0.4.6-test1.apk
+          gh release delete v0.4.6-test1 --cleanup-tag --yes || true
+          gh release create v0.4.6-test1 OptiCore-v0.4.6-test1.apk \
+            --target "${GITHUB_SHA}" \
+            --title "OptiCore 0.4.6 Test 1" \
+            --notes "Build de prueba 0.4.6-test1 con lectura del DNS actual de Android y Private DNS."
+
