@@ -15,6 +15,7 @@
   var failures=0;
   var timer=null;
   var linked=false;
+  var lastBridgeByteSample=null;
 
   function byId(id){
     return document.getElementById(id);
@@ -47,6 +48,62 @@
     var s=Math.floor(total%60);
     var pad=function(n){return String(n).padStart(2,"0")};
     return h>0?h+":"+pad(m)+":"+pad(s):pad(m)+":"+pad(s);
+  }
+
+  function computeBridgeVisibleRates(data){
+    var now=Date.now();
+
+    var totalRx=Math.max(
+      0,
+      Number(data&&data.vpn_rx_bytes)||0
+    );
+
+    var totalTx=Math.max(
+      0,
+      Number(data&&data.vpn_tx_bytes)||0
+    );
+
+    var rawRx=Math.max(
+      0,
+      Number(data&&data.vpn_rx_bps)||0
+    );
+
+    var rawTx=Math.max(
+      0,
+      Number(data&&data.vpn_tx_bps)||0
+    );
+
+    var visibleRx=rawRx;
+    var visibleTx=rawTx;
+
+    if(lastBridgeByteSample){
+      var elapsed=
+        (now-lastBridgeByteSample.time)/1000;
+
+      if(elapsed>0.25 &&
+         totalRx>=lastBridgeByteSample.rx &&
+         totalTx>=lastBridgeByteSample.tx){
+
+        visibleRx=
+          (totalRx-lastBridgeByteSample.rx)/
+          elapsed;
+
+        visibleTx=
+          (totalTx-lastBridgeByteSample.tx)/
+          elapsed;
+      }
+    }
+
+    lastBridgeByteSample={
+      time:now,
+      rx:totalRx,
+      tx:totalTx
+    };
+
+    return {
+      rx:Math.max(0,visibleRx),
+      tx:Math.max(0,visibleTx)
+    };
   }
 
   function validToken(value){
@@ -392,10 +449,19 @@
     failures=0;
     linked=true;
 
+    var visibleRates=
+      computeBridgeVisibleRates(
+        incoming
+      );
+
     lastData=Object.assign(
       {},
       lastData,
-      incoming
+      incoming,
+      {
+        display_rx_bps:visibleRates.rx,
+        display_tx_bps:visibleRates.tx
+      }
     );
 
     window.__OPTICORE_BRIDGE_DATA__=
@@ -506,14 +572,14 @@
     text(
       "qfRxRate",
       fmtRate(
-        lastData.vpn_rx_bps
+        lastData.display_rx_bps
       )
     );
 
     text(
       "qfTxRate",
       fmtRate(
-        lastData.vpn_tx_bps
+        lastData.display_tx_bps
       )
     );
 
