@@ -7,6 +7,7 @@
   if(!IS_PUBLIC)return;
 
   var LOCAL_API="http://127.0.0.1:8766/api/bridge-status";
+  var BOOTSTRAP_API="http://127.0.0.1:8766/api/bridge-bootstrap";
   var TOKEN_KEY="opticore_bridge_token_v1";
   var token="";
   var lastData={};
@@ -122,6 +123,64 @@
     }catch(e){}
   }
 
+  async function bootstrapToken(){
+    var controller=
+      typeof AbortController!=="undefined"
+        ? new AbortController()
+        : null;
+
+    var timeout=setTimeout(
+      function(){
+        if(controller){
+          try{controller.abort();}catch(e){}
+        }
+      },
+      9000
+    );
+
+    try{
+      var response=
+        await fetch(
+          BOOTSTRAP_API+
+          "?t="+Date.now(),
+          {
+            method:"GET",
+            mode:"cors",
+            cache:"no-store",
+            signal:controller
+              ? controller.signal
+              : undefined,
+            targetAddressSpace:"loopback"
+          }
+        );
+
+      if(!response.ok){
+        throw new Error(
+          "bootstrap_http_"+
+          response.status
+        );
+      }
+
+      var data=
+        await response.json();
+
+      if(!data ||
+         data.ok!==true ||
+         !validToken(data.token)){
+        throw new Error(
+          "bad_bootstrap_response"
+        );
+      }
+
+      saveToken(data.token);
+
+      return token;
+
+    }finally{
+      clearTimeout(timeout);
+    }
+  }
+
   function launchPairing(){
     try{
       var next=randomToken();
@@ -171,26 +230,17 @@
 
         el.addEventListener("click",function(event){
           event.preventDefault();
-
-          if(linked){
-            openApp();
-          }else{
-            launchPairing();
-          }
+          openApp();
         });
       }
 
       el.setAttribute(
         "href",
-        linked
-          ? "opticorevpn://control"
-          : "#"
+        "opticorevpn://control"
       );
 
       el.textContent=
-        linked
-          ? "Abrir OptiCore Android"
-          : "Enlazar con OptiCore Android";
+        "Abrir OptiCore Android";
     });
   }
 
@@ -475,9 +525,7 @@
 
   async function requestBridge(detail){
     if(!validToken(token)){
-      throw new Error(
-        "not_paired"
-      );
+      await bootstrapToken();
     }
 
     var controller=
@@ -552,7 +600,7 @@
 
   async function requestReadOnlyEndpoint(path,timeoutMs){
     if(!validToken(token)){
-      throw new Error("not_paired");
+      await bootstrapToken();
     }
 
     var controller=
@@ -664,11 +712,6 @@
       return;
     }
 
-    if(!validToken(token)){
-      syncLaunchers();
-      return;
-    }
-
     busy=true;
 
     try{
@@ -680,6 +723,20 @@
       applyData(data);
 
     }catch(e){
+      if(e &&
+         e.message==="bridge_not_paired"){
+        try{
+          var recovered=
+            await requestBridge(
+              !!detail
+            );
+
+          applyData(recovered);
+          return;
+
+        }catch(recoveryError){}
+      }
+
       failures++;
       markStale();
 
@@ -716,25 +773,20 @@
     syncLaunchers();
     bindRefreshButton();
 
-    if(validToken(token)){
-      refresh(true);
-    }
+    refresh(true);
 
     window.addEventListener(
       "online",
       function(){
-        if(validToken(token)){
-          failures=0;
-          refresh(false);
-        }
+        failures=0;
+        refresh(false);
       }
     );
 
     document.addEventListener(
       "visibilitychange",
       function(){
-        if(!document.hidden &&
-           validToken(token)){
+        if(!document.hidden){
           refresh(false);
         }
       }
@@ -743,9 +795,7 @@
     window.addEventListener(
       "focus",
       function(){
-        if(validToken(token)){
-          refresh(false);
-        }
+        refresh(false);
       }
     );
   }
