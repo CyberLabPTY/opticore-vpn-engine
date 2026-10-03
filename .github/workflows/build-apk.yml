@@ -127,6 +127,18 @@ jobs:
           path: web/
           if-no-files-found: error
 
+      - name: Publish OptiCore 0.5.0-test3 APK
+        if: github.ref == 'refs/heads/opticore-shizuku-v050-test3'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk OptiCore-v0.5.0-test3.apk
+          gh release delete v0.5.0-test3 --cleanup-tag --yes || true
+          gh release create v0.5.0-test3 OptiCore-v0.5.0-test3.apk \
+            --target "${GITHUB_SHA}" \
+            --title "OptiCore 0.5.0 Test 3 - Shizuku" \
+            --notes "Build de prueba con Shizuku API 13.1.5, UserService no-root, filtro UID 2000, diagnostico avanzado de RAM/red y panel Shizuku. La rama estable 0.4.6.3 no se modifica."
+
       - name: Publish direct OptiCore 0.4.3 test APK
         if: github.ref == 'refs/heads/opticore-final-v043-persistent-pairing'
         env:
