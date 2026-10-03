@@ -34,6 +34,7 @@ on:
       - opticore-final-v043-persistent-pairing
       - opticore-final-v044-close-confirmation
       - opticore-final-v045-close-refresh-verify
+      - opticore-v046-step2-dns-current
 
 jobs:
   build:
