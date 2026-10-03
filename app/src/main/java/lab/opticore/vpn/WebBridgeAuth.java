@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -36,6 +37,9 @@ public final class WebBridgeAuth {
 
     private static final String KEY_DEVICE_ID =
             "device_id_v2";
+
+    private static final String KEY_AUTO_TOKEN =
+            "auto_bridge_token_v3";
 
     private WebBridgeAuth() {}
 
@@ -181,6 +185,77 @@ public final class WebBridgeAuth {
         return created;
     }
 
+    public static String autoToken(
+            Context context,
+            String origin) {
+
+        if (context == null ||
+                !PUBLIC_ORIGIN.equals(origin)) {
+            return "";
+        }
+
+        SharedPreferences prefs =
+                prefs(context);
+
+        String current =
+                prefs.getString(
+                        KEY_AUTO_TOKEN,
+                        "");
+
+        if (isTokenFormatValid(current)) {
+            approve(
+                    context,
+                    current,
+                    origin);
+
+            return current
+                    .toLowerCase(
+                            Locale.US);
+        }
+
+        try {
+            byte[] bytes =
+                    new byte[32];
+
+            new SecureRandom()
+                    .nextBytes(bytes);
+
+            StringBuilder token =
+                    new StringBuilder(64);
+
+            for (byte value : bytes) {
+                token.append(
+                        String.format(
+                                Locale.US,
+                                "%02x",
+                                value & 0xff));
+            }
+
+            String created =
+                    token.toString();
+
+            if (!isTokenFormatValid(created)) {
+                return "";
+            }
+
+            prefs.edit()
+                    .putString(
+                            KEY_AUTO_TOKEN,
+                            created)
+                    .apply();
+
+            approve(
+                    context,
+                    created,
+                    origin);
+
+            return created;
+
+        } catch (Throwable ignored) {
+            return "";
+        }
+    }
+
     public static int authorizedClientCount(
             Context context) {
 
@@ -221,6 +296,7 @@ public final class WebBridgeAuth {
         prefs(context)
                 .edit()
                 .remove(KEY_TOKEN_HASHES)
+                .remove(KEY_AUTO_TOKEN)
                 .remove(LEGACY_KEY_TOKEN)
                 .remove(LEGACY_KEY_EXPIRES)
                 .apply();
