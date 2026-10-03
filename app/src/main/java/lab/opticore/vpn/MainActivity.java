@@ -165,6 +165,14 @@ public final class MainActivity extends Activity {
         usage.setOnClickListener(v -> openUsageAccess());
         root.addView(usage);
 
+        Button shizuku =
+                button("Motor Shizuku / diagnóstico avanzado");
+
+        shizuku.setOnClickListener(v ->
+                openShizukuControl());
+
+        root.addView(shizuku);
+
         Button site = button("Abrir sitio OptiCore");
         site.setOnClickListener(v -> openPublicSite());
         root.addView(site);
@@ -492,6 +500,27 @@ public final class MainActivity extends Activity {
                     this,
                     "No se pudieron abrir los ajustes de acceso de uso",
                     Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openShizukuControl() {
+
+        try {
+
+            startActivity(
+                    new Intent(
+                            this,
+                            ShizukuControlActivity.class
+                    )
+            );
+
+        } catch (Throwable e) {
+
+            Toast.makeText(
+                    this,
+                    "No se pudo abrir el motor Shizuku",
+                    Toast.LENGTH_LONG
+            ).show();
         }
     }
 
