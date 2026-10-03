@@ -275,6 +275,117 @@
     el.style.width=pct.toFixed(1)+"%";
   }
 
+  var qfBridgeRxHistory=[];
+  var qfBridgeTxHistory=[];
+  var QF_BRIDGE_MAX_POINTS=48;
+
+  function drawBridgeQFlow(data){
+    var canvas=byId("qfCanvas");
+    if(!canvas || !data)return;
+
+    var rx=Math.max(
+      0,
+      Number(data.vpn_rx_ewma_bps)||0
+    );
+
+    var tx=Math.max(
+      0,
+      Number(data.vpn_tx_ewma_bps)||0
+    );
+
+    qfBridgeRxHistory.push(rx);
+    qfBridgeTxHistory.push(tx);
+
+    if(qfBridgeRxHistory.length>QF_BRIDGE_MAX_POINTS){
+      qfBridgeRxHistory.shift();
+    }
+
+    if(qfBridgeTxHistory.length>QF_BRIDGE_MAX_POINTS){
+      qfBridgeTxHistory.shift();
+    }
+
+    var rect=canvas.getBoundingClientRect();
+    var dpr=Math.min(
+      window.devicePixelRatio||1,
+      2
+    );
+    var w=Math.max(
+      280,
+      Math.round(rect.width)
+    );
+    var h=112;
+
+    canvas.width=Math.round(w*dpr);
+    canvas.height=Math.round(h*dpr);
+
+    var ctx=canvas.getContext("2d");
+    if(!ctx)return;
+
+    ctx.setTransform(
+      dpr,0,0,dpr,0,0
+    );
+    ctx.clearRect(0,0,w,h);
+
+    ctx.strokeStyle=
+      "rgba(255,255,255,.055)";
+    ctx.lineWidth=1;
+
+    for(var g=1;g<4;g++){
+      var gy=
+        Math.round(h*g/4)+0.5;
+      ctx.beginPath();
+      ctx.moveTo(0,gy);
+      ctx.lineTo(w,gy);
+      ctx.stroke();
+    }
+
+    var maxV=1;
+    var i;
+
+    for(i=0;i<qfBridgeRxHistory.length;i++){
+      maxV=Math.max(
+        maxV,
+        qfBridgeRxHistory[i],
+        qfBridgeTxHistory[i]||0
+      );
+    }
+
+    function drawLine(arr,color){
+      if(arr.length<2)return;
+
+      ctx.beginPath();
+
+      for(var j=0;j<arr.length;j++){
+        var x=
+          (j/(QF_BRIDGE_MAX_POINTS-1))*w;
+
+        var y=
+          h-8-
+          (arr[j]/maxV)*(h-18);
+
+        if(j===0){
+          ctx.moveTo(x,y);
+        }else{
+          ctx.lineTo(x,y);
+        }
+      }
+
+      ctx.strokeStyle=color;
+      ctx.lineWidth=2;
+      ctx.stroke();
+    }
+
+    drawLine(
+      qfBridgeRxHistory,
+      "#53dfcf"
+    );
+
+    drawLine(
+      qfBridgeTxHistory,
+      "#5bc0eb"
+    );
+  }
+
   function applyData(incoming){
     if(!incoming || incoming.ok!==true)return;
 
@@ -446,6 +557,10 @@
       "qfTxFill",
       lastData
         .vpn_tx_ewma_bps
+    );
+
+    drawBridgeQFlow(
+      lastData
     );
 
     text(
