@@ -277,9 +277,15 @@ public final class LocalPanelServer {
                             .equals(
                                     initialPath);
 
+            boolean bridgeBootstrapRequest =
+                    "/api/bridge-bootstrap"
+                            .equals(
+                                    initialPath);
+
             boolean bridgeRequest =
                     bridgeStatusRequest ||
-                            bridgeDnsRequest;
+                            bridgeDnsRequest ||
+                            bridgeBootstrapRequest;
 
             String origin = "";
             String bridgeToken = "";
@@ -345,6 +351,65 @@ public final class LocalPanelServer {
                             405,
                             jsonError(
                                     "method_not_allowed"));
+
+                    return;
+                }
+
+                if (bridgeBootstrapRequest) {
+
+                    String autoToken =
+                            WebBridgeAuth.autoToken(
+                                    appContext,
+                                    origin);
+
+                    if (autoToken == null ||
+                            autoToken.isEmpty()) {
+
+                        sendBridgeJson(
+                                socket,
+                                500,
+                                jsonError(
+                                        "bridge_bootstrap_failed"));
+
+                        return;
+                    }
+
+                    JSONObject bootstrap =
+                            new JSONObject();
+
+                    bootstrap.put(
+                            "ok",
+                            true);
+
+                    bootstrap.put(
+                            "bridge_auto_link",
+                            true);
+
+                    bootstrap.put(
+                            "bridge_read_only",
+                            true);
+
+                    bootstrap.put(
+                            "bridge_persistent",
+                            true);
+
+                    bootstrap.put(
+                            "token",
+                            autoToken);
+
+                    bootstrap.put(
+                            "device_id",
+                            WebBridgeAuth.deviceId(
+                                    appContext));
+
+                    bootstrap.put(
+                            "version",
+                            appVersion());
+
+                    sendBridgeJson(
+                            socket,
+                            200,
+                            bootstrap.toString());
 
                     return;
                 }
@@ -974,6 +1039,10 @@ public final class LocalPanelServer {
 
             out.put(
                     "bridge_persistent",
+                    true);
+
+            out.put(
+                    "bridge_auto_link",
                     true);
 
             out.put(
